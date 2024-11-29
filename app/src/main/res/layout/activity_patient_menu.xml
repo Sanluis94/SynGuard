@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/patientMenuTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Patient Menu"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/startChronometerButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Chronometer"
+        android:layout_below="@id/patientMenuTitle"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="@color/backgroundColor" />
+
+    <Button
+        android:id="@+id/viewMedicalDataButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Medical Data"
+        android:layout_below="@id/startChronometerButton"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="@color/backgroundColor" />
+
+    <Button
+        android:id="@+id/logoutButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Logout"
+        android:layout_below="@id/viewMedicalDataButton"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/rounded_button"
+        android:textColor="@color/backgroundColor" />
+
+</RelativeLayout>

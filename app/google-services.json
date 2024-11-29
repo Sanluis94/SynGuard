@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "274904830748",
+    "firebase_url": "https://projeto-integrador-f9189-default-rtdb.firebaseio.com",
+    "project_id": "projeto-integrador-f9189",
+    "storage_bucket": "projeto-integrador-f9189.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:274904830748:android:3f5eca318d9ec25f3ee0d9",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBF1Rkpd8ko33st0qpiz6qZm5IkD9fdQFk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

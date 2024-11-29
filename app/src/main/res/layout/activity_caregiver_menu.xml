@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/caregiverMenuTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Caregiver Menu"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_centerHorizontal="true" />
+
+    <TextView
+        android:id="@+id/caregiverIdView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ABCD12"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:id="@+id/viewPatientDataButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="View Patient Data"
+        android:layout_below="@id/caregiverMenuTitle"
+        android:layout_marginTop="20dp" />
+
+    <Button
+        android:id="@+id/logoutButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Logout"
+        android:layout_below="@id/viewPatientDataButton"
+        android:layout_marginTop="20dp" />
+
+</RelativeLayout>

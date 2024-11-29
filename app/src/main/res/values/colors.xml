@@ -1,0 +1,27 @@
+<resources>
+        <color name="primaryColor">#6200EE</color>
+        <color name="primaryDarkColor">#3700B3</color>
+        <color name="accentColor">#03DAC5</color>
+        <color name="backgroundColor">#FFFFFF</color>
+        <color name="textColorPrimary">#000000</color>
+        <color name="textColorSecondary">#757575</color>
+        <color name="errorColor">#B00020</color>
+        <color name="buttonBackgroundColor">#6200EE</color>
+        <color name="buttonTextColor">#FFFFFF</color>
+        <color name="editTextBackground">#EEEEEE</color>
+        <color name="textColor">#000000</color>
+        <color name="primaryColorDark">#6200EE</color> <!-- Cor para a barra de status escura -->
+        <color name="statusBarColor">#3700B3</color> <!-- Cor da barra de status -->
+        <color name="primaryColorLight">#BB86FC</color> <!-- Cor primária clara -->
+        <color name="purple_200">#9C4D97</color>
+        <color name="teal_200">#80CBC4</color>
+        <color name="teal_700">#00796B</color>
+        <color name="white">#FFFFFF</color>
+        <color name="secondaryTextColor">#757575</color> <!-- Adicionada a cor secundaria -->
+        <color name="primaryLightColor">#BB86FC</color>
+        <color name="secondaryColor">#03DAC5</color>
+        <color name="textPrimaryColor">#000000</color>
+        <color name="textSecondaryColor">#757575</color>
+        <color name="buttonColor">#6200EE</color>
+
+</resources>

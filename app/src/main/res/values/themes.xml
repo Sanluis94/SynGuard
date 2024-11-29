@@ -1,0 +1,16 @@
+<resources>
+
+    <!-- Definindo o tema principal para o aplicativo -->
+    <style name="Theme.SynGuard2" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Defina as cores e outros atributos do tema -->
+        <item name="colorPrimary">@color/primaryColor</item>
+        <item name="colorPrimaryVariant">@color/primaryColorDark</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+        <item name="colorSecondary">@color/accentColor</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+
+        <!-- Outros atributos de tema que você desejar -->
+        <item name="android:statusBarColor">@color/statusBarColor</item>
+    </style>
+
+</resources>

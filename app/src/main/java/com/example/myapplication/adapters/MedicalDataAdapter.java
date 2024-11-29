@@ -9,7 +9,7 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.myapplication.R;
-import com.example.myapplication.MedicalData;
+import com.example.myapplication.models.MedicalData;
 
 import java.util.List;
 

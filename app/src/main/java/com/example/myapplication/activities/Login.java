@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.example.myapplication.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -9,7 +9,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myapplication.FirebaseUtils;
+import com.example.myapplication.R;
+import com.example.myapplication.utils.FirebaseUtils;
 import com.google.firebase.auth.FirebaseAuth;
 
 public class Login extends AppCompatActivity {

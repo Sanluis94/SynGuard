@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.example.myapplication.activities;
 
 import android.os.Bundle;
 import android.widget.Button;
@@ -6,7 +6,8 @@ import android.widget.EditText;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myapplication.ReusableCodeForAll;
+import com.example.myapplication.R;
+import com.example.myapplication.utils.ReusableCodeForAll;
 
 public class VerifyPhone extends AppCompatActivity {
 

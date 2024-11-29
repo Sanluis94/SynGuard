@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.example.myapplication.utils;
 
 import android.Manifest;
 import android.app.Activity;
@@ -29,10 +29,10 @@ public class Utils {
                 SmsManager smsManager = SmsManager.getDefault();
                 smsManager.sendTextMessage(phoneNumber, null, message, null, null);
             } catch (Exception e) {
-                com.example.myapplication.ReusableCodeForAll.showToast(context, "Failed to send SMS: " + e.getMessage());
+                ReusableCodeForAll.showToast(context, "Failed to send SMS: " + e.getMessage());
             }
         } else {
-            com.example.myapplication.ReusableCodeForAll.showToast(context, "SMS permission not granted!");
+            ReusableCodeForAll.showToast(context, "SMS permission not granted!");
         }
     }
 }

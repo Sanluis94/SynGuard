@@ -1,14 +1,11 @@
-package com.example.myapplication;
+package com.example.myapplication.utils;
 
 import android.util.Log;
 
-import com.example.myapplication.CrisisData;
+import com.example.myapplication.models.CrisisData;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class FirebaseUtils {
 

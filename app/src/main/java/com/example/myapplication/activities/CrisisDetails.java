@@ -1,11 +1,12 @@
-package com.example.myapplication;
+package com.example.myapplication.activities;
 
 import android.os.Bundle;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myapplication.CrisisData;
+import com.example.myapplication.R;
+import com.example.myapplication.models.CrisisData;
 
 public class CrisisDetails extends AppCompatActivity {
 

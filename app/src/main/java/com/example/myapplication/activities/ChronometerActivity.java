@@ -1,8 +1,6 @@
-package com.example.myapplication;
+package com.example.myapplication.activities;
 
-import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -12,8 +10,8 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myapplication.CronometerService;
-import com.example.myapplication.FirebaseUtils;
+import com.example.myapplication.utils.FirebaseUtils;
+import com.example.myapplication.R;
 
 public class ChronometerActivity extends AppCompatActivity {
 

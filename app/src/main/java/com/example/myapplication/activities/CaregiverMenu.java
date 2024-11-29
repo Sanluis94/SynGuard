@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.example.myapplication.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -7,7 +7,9 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.myapplication.FirebaseUtils;
+import com.example.myapplication.models.MedicalData;
+import com.example.myapplication.utils.FirebaseUtils;
+import com.example.myapplication.R;
 
 public class CaregiverMenu extends AppCompatActivity {
 
@@ -29,7 +31,7 @@ public class CaregiverMenu extends AppCompatActivity {
 
         // Botão para visualizar dados do paciente
         viewPatientDataButton.setOnClickListener(view -> {
-            Intent intent = new Intent(CaregiverMenu.this, com.example.myapplication.MedicalData.class);
+            Intent intent = new Intent(CaregiverMenu.this, MedicalData.class);
             startActivity(intent);
         });
 

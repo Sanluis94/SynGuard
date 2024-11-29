@@ -22,21 +22,21 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
 
-        <activity android:name=".VerifyPhone" />
-        <activity android:name=".Register" />
-        <activity android:name=".ForgotPassword" />
+        <activity android:name=".activities.VerifyPhone" />
+        <activity android:name=".activities.Register" />
+        <activity android:name=".activities.ForgotPassword" />
         <activity android:name=".PatientMenu" />
-        <activity android:name=".CaregiverMenu" />
-        <activity android:name=".ChronometerActivity" />
-        <activity android:name=".MedicalData" />
-        <activity android:name=".CrisisDetails" />
-        <activity android:name=".Login"
+        <activity android:name=".activities.CaregiverMenu" />
+        <activity android:name=".activities.ChronometerActivity" />
+        <activity android:name=".models.MedicalData" />
+        <activity android:name=".activities.CrisisDetails" />
+        <activity android:name=".activities.Login"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".CronometerService" />
+        <service android:name=".services.CronometerService" />
     </application>
 </manifest>

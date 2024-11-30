@@ -1,34 +1,42 @@
 package com.example.myapplication.models;
 
-import java.io.Serializable;
-
-public class CrisisData implements Serializable {
-
-    private long timestamp;
-    private long duration;
+public class CrisisData {
+    private int crisisCount;       // Número de crises
+    private long averageTime;      // Tempo médio das crises
+    private long lastCrisisTime;   // Duração da última crise
 
     public CrisisData() {
-        // Construtor padrão necessário para o Firebase
+        // Construtor vazio necessário para Firebase
     }
 
-    public CrisisData(long timestamp, long duration) {
-        this.timestamp = timestamp;
-        this.duration = duration;
+    public CrisisData(int crisisCount, long averageTime, long lastCrisisTime) {
+        this.crisisCount = crisisCount;
+        this.averageTime = averageTime;
+        this.lastCrisisTime = lastCrisisTime;
     }
 
-    public long getTimestamp() {
-        return timestamp;
+    // Getters e setters
+    public int getCrisisCount() {
+        return crisisCount;
     }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
+    public void setCrisisCount(int crisisCount) {
+        this.crisisCount = crisisCount;
     }
 
-    public long getDuration() {
-        return duration;
+    public long getAverageTime() {
+        return averageTime;
     }
 
-    public void setDuration(long duration) {
-        this.duration = duration;
+    public void setAverageTime(long averageTime) {
+        this.averageTime = averageTime;
+    }
+
+    public long getLastCrisisTime() {
+        return lastCrisisTime;
+    }
+
+    public void setLastCrisisTime(long lastCrisisTime) {
+        this.lastCrisisTime = lastCrisisTime;
     }
 }

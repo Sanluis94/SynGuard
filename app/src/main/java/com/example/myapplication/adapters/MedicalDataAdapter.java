@@ -11,30 +11,29 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.myapplication.R;
 import com.example.myapplication.models.MedicalData;
 
-import java.util.List;
+import java.util.ArrayList;
 
-public class MedicalDataAdapter extends RecyclerView.Adapter<MedicalDataAdapter.MedicalDataViewHolder> {
+public class MedicalDataAdapter extends RecyclerView.Adapter<MedicalDataAdapter.ViewHolder> {
 
-    private final List<MedicalData> medicalDataList;
+    private ArrayList<MedicalData> medicalDataList;
 
-    public MedicalDataAdapter(List<MedicalData> medicalDataList) {
+    public MedicalDataAdapter(ArrayList<MedicalData> medicalDataList) {
         this.medicalDataList = medicalDataList;
     }
 
     @NonNull
     @Override
-    public MedicalDataViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_medical_record, parent, false);
-        return new MedicalDataViewHolder(view);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull MedicalDataViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MedicalData medicalData = medicalDataList.get(position);
-
-        holder.monthYear.setText(medicalData.getMonthYear());
-        holder.totalCrises.setText(String.valueOf(medicalData.getTotalCrises()));
-        holder.averageDuration.setText(String.valueOf(medicalData.getAverageDuration()));
+        holder.tvMonthYear.setText(medicalData.getMonthYear());
+        holder.tvCrisisCount.setText("Crises: " + medicalData.getCrisisCount());
+        holder.tvAverageTime.setText("Média: " + medicalData.getAverageTime() + " mins");
     }
 
     @Override
@@ -42,16 +41,14 @@ public class MedicalDataAdapter extends RecyclerView.Adapter<MedicalDataAdapter.
         return medicalDataList.size();
     }
 
-    static class MedicalDataViewHolder extends RecyclerView.ViewHolder {
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView tvMonthYear, tvCrisisCount, tvAverageTime;
 
-        TextView monthYear, totalCrises, averageDuration;
-
-        public MedicalDataViewHolder(@NonNull View itemView) {
+        ViewHolder(View itemView) {
             super(itemView);
-
-            monthYear = itemView.findViewById(R.id.monthYear);
-            totalCrises = itemView.findViewById(R.id.totalCrises);
-            averageDuration = itemView.findViewById(R.id.averageDuration);
+            tvMonthYear = itemView.findViewById(R.id.tvMonthYear);
+            tvCrisisCount = itemView.findViewById(R.id.tvCrisisCount);
+            tvAverageTime = itemView.findViewById(R.id.tvAverageTime);
         }
     }
 }

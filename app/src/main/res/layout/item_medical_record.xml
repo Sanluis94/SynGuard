@@ -6,16 +6,24 @@
     android:padding="8dp">
 
     <TextView
-        android:id="@+id/recordDateTextView"
+        android:id="@+id/tvMonthYear"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Date: 2024-01-01"
-        android:textSize="16sp" />
+        android:text="Mês/Ano"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
     <TextView
-        android:id="@+id/recordDetailsTextView"
+        android:id="@+id/tvCrisisCount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Details: Example record details"
-        android:textSize="16sp" />
+        android:text="Número de crises"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/tvAverageTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Tempo médio"
+        android:textSize="14sp" />
 </LinearLayout>

@@ -33,7 +33,7 @@ import java.util.UUID;
 public class PatientMenu extends AppCompatActivity {
 
     private static final String TAG = "PatientMenuActivity";
-    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // Substitua pelo UUID do seu módulo HC-05
+    public static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // Substitua pelo UUID do seu módulo HC-05
     private static final String HC05_NAME = "HC-05"; // Substitua pelo nome do seu módulo HC-05
 
     private TextView medicalDataTextView;

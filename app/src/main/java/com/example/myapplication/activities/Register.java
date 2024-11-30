@@ -1,5 +1,7 @@
 package com.example.myapplication.activities;
 
+import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -9,76 +11,121 @@ import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import com.example.myapplication.R;
-import com.example.myapplication.utils.FirebaseUtils;
-import com.google.firebase.auth.FirebaseAuth;
 
-public class Register extends AppCompatActivity {
+import java.util.Random;
 
-    private EditText fullNameInput, emailInput, passwordInput, confirmPasswordInput, caregiverIdInput, phoneInput;
-    private RadioGroup roleGroup;
+public class Register extends Activity {
+
+    private EditText fullNameField, emailField, passwordField, confirmPasswordField, caregiverIdField;
     private Button registerButton;
+    private RadioGroup userTypeGroup;
+    private RadioButton patientRadioButton, caregiverRadioButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        initializeViews();
+        // Inicializa os campos e botões
+        fullNameField = findViewById(R.id.fullNameField);
+        emailField = findViewById(R.id.emailField);
+        passwordField = findViewById(R.id.passwordField);
+        confirmPasswordField = findViewById(R.id.confirmPasswordField);
+        caregiverIdField = findViewById(R.id.caregiverIdField);  // Visível apenas se o tipo for paciente
 
-        registerButton.setOnClickListener(this::registerUser);
-    }
+        userTypeGroup = findViewById(R.id.userTypeGroup);
+        patientRadioButton = findViewById(R.id.patientRadioButton);
+        caregiverRadioButton = findViewById(R.id.caregiverRadioButton);
 
-    private void initializeViews() {
-        fullNameInput = findViewById(R.id.fullNameInput);
-        emailInput = findViewById(R.id.emailInput);
-        passwordInput = findViewById(R.id.passwordInput);
-        confirmPasswordInput = findViewById(R.id.confirmPasswordInput);
-        caregiverIdInput = findViewById(R.id.caregiverIdInput);
-        phoneInput = findViewById(R.id.phoneInput);
-        roleGroup = findViewById(R.id.roleGroup);
         registerButton = findViewById(R.id.registerButton);
+
+        // Ação de clique para o botão "Registrar"
+        registerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                registerUser(); // Tenta registrar o usuário
+            }
+        });
+
+        // Adiciona lógica para exibir campo de ID do cuidador somente para paciente
+        userTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.patientRadioButton) {
+                caregiverIdField.setVisibility(View.VISIBLE);  // Exibe campo de ID do cuidador
+            } else {
+                caregiverIdField.setVisibility(View.GONE);  // Esconde campo de ID do cuidador
+            }
+        });
     }
 
-    private void registerUser(View view) {
-        String fullName = fullNameInput.getText().toString().trim();
-        String email = emailInput.getText().toString().trim();
-        String password = passwordInput.getText().toString().trim();
-        String confirmPassword = confirmPasswordInput.getText().toString().trim();
-        String phone = phoneInput.getText().toString().trim();
-        String caregiverId = caregiverIdInput.getText().toString().trim();
-        int selectedRoleId = roleGroup.getCheckedRadioButtonId();
-        RadioButton selectedRole = findViewById(selectedRoleId);
+    // Método para registrar o usuário
+    private void registerUser() {
+        String fullName = fullNameField.getText().toString().trim();
+        String email = emailField.getText().toString().trim();
+        String password = passwordField.getText().toString().trim();
+        String confirmPassword = confirmPasswordField.getText().toString().trim();
+        String userType = getUserType();  // Obtém o tipo de usuário (paciente ou cuidador)
+        String caregiverId = caregiverIdField.getText().toString().trim();
 
-        if (TextUtils.isEmpty(fullName) || TextUtils.isEmpty(email) || TextUtils.isEmpty(password) ||
-                TextUtils.isEmpty(confirmPassword) || selectedRole == null) {
-            Toast.makeText(this, "All fields are required!", Toast.LENGTH_SHORT).show();
+        // Verificação de campos obrigatórios
+        if (TextUtils.isEmpty(fullName) || TextUtils.isEmpty(email) || TextUtils.isEmpty(password)
+                || TextUtils.isEmpty(confirmPassword)) {
+            Toast.makeText(Register.this, "Preencha todos os campos obrigatórios!", Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (!password.equals(confirmPassword)) {
-            Toast.makeText(this, "Passwords do not match!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(Register.this, "As senhas não coincidem!", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        String role = selectedRole.getText().toString();
-
-        if (role.equals("Patient") && TextUtils.isEmpty(caregiverId)) {
-            Toast.makeText(this, "Caregiver ID is required for patients!", Toast.LENGTH_SHORT).show();
+        if ("paciente".equals(userType) && TextUtils.isEmpty(caregiverId)) {
+            Toast.makeText(Register.this, "O ID do cuidador é obrigatório para pacientes!", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        FirebaseUtils.saveUserDetails(fullName, email, role, phone, caregiverId);
-                        Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show();
-                        finish();
-                    } else {
-                        Toast.makeText(this, "Registration failed: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                });
+        // Se o tipo de usuário for cuidador, gerar um ID único
+        if ("cuidador".equals(userType)) {
+            String caregiverUniqueId = generateCaregiverId();
+            // Aqui você pode salvar os dados no Firebase ou em outro banco de dados
+            Toast.makeText(Register.this, "Usuário registrado com sucesso! ID do cuidador: " + caregiverUniqueId, Toast.LENGTH_LONG).show();
+        } else {
+            // Registra o paciente normalmente (não precisa de ID único)
+            Toast.makeText(Register.this, "Paciente registrado com sucesso!", Toast.LENGTH_LONG).show();
+        }
+
+        // Navega para a tela de login após o registro
+        Intent intent = new Intent(Register.this, Login.class);
+        startActivity(intent);
+        finish(); // Finaliza a tela de registro
+    }
+
+    // Método para gerar um ID único para cuidadores
+    private String generateCaregiverId() {
+        Random random = new Random();
+        StringBuilder caregiverId = new StringBuilder();
+
+        // Gerar 4 letras aleatórias
+        for (int i = 0; i < 4; i++) {
+            caregiverId.append((char) (random.nextInt(26) + 'A'));
+        }
+
+        // Gerar 2 números aleatórios
+        for (int i = 0; i < 2; i++) {
+            caregiverId.append(random.nextInt(10));
+        }
+
+        return caregiverId.toString();
+    }
+
+    // Método para obter o tipo de usuário selecionado
+    private String getUserType() {
+        int selectedId = userTypeGroup.getCheckedRadioButtonId();
+        if (selectedId == R.id.patientRadioButton) {
+            return "paciente";
+        } else if (selectedId == R.id.caregiverRadioButton) {
+            return "cuidador";
+        }
+        return "";  // Caso nenhum seja selecionado
     }
 }

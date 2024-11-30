@@ -1,5 +1,6 @@
 package com.example.myapplication.activities;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -10,15 +11,19 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
-import com.example.myapplication.utils.FirebaseUtils;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
 
 public class Login extends AppCompatActivity {
 
     private EditText emailField, passwordField;
-    private Button loginButton, forgotPasswordButton, registerButton;
-
-    private FirebaseAuth firebaseAuth;
+    private Button loginButton, registerButton, forgotPasswordButton;
+    private FirebaseAuth mAuth;
+    private DatabaseReference mDatabase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,48 +33,74 @@ public class Login extends AppCompatActivity {
         emailField = findViewById(R.id.emailField);
         passwordField = findViewById(R.id.passwordField);
         loginButton = findViewById(R.id.loginButton);
-        forgotPasswordButton = findViewById(R.id.forgotPasswordButton);
         registerButton = findViewById(R.id.registerButton);
+        forgotPasswordButton = findViewById(R.id.forgotPasswordButton);
 
-        firebaseAuth = FirebaseAuth.getInstance();
+        mAuth = FirebaseAuth.getInstance();
+        mDatabase = FirebaseDatabase.getInstance().getReference();
 
-        loginButton.setOnClickListener(view -> {
-            String email = emailField.getText().toString().trim();
-            String password = passwordField.getText().toString().trim();
+        loginButton.setOnClickListener(v -> loginUser());
 
-            if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
-                Toast.makeText(Login.this, "Fill in all fields", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        registerButton.setOnClickListener(v -> navigateToRegister());
 
-            firebaseAuth.signInWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(task -> {
-                        if (task.isSuccessful()) {
-                            navigateToMenu();
-                        } else {
-                            Toast.makeText(Login.this, "Authentication failed", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-        });
-
-        forgotPasswordButton.setOnClickListener(view -> {
-            Intent intent = new Intent(Login.this, ForgotPassword.class);
-            startActivity(intent);
-        });
-
-        registerButton.setOnClickListener(view -> {
-            Intent intent = new Intent(Login.this, Register.class);
-            startActivity(intent);
-        });
+        forgotPasswordButton.setOnClickListener(v -> navigateToForgotPassword());
     }
 
-    private void navigateToMenu() {
-        String currentUserId = FirebaseUtils.getCurrentUserId();
-        if (currentUserId != null) {
-            // Decidir qual menu abrir com base no tipo de usuário
-            Intent intent = new Intent(Login.this, MainActivity.class); // Placeholder
-            startActivity(intent);
-            finish();
+    private void loginUser() {
+        String email = emailField.getText().toString().trim();
+        String password = passwordField.getText().toString().trim();
+
+        if (TextUtils.isEmpty(email) || TextUtils.isEmpty(password)) {
+            Toast.makeText(Login.this, "Preencha todos os campos!", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        // Verifica o tipo de usuário
+                        String userId = mAuth.getCurrentUser().getUid();
+                        mDatabase.child("users").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(DataSnapshot dataSnapshot) {
+                                String userType = dataSnapshot.child("userType").getValue(String.class);
+                                if ("cuidador".equals(userType)) {
+                                    navigateToCaregiverMenu();
+                                } else if ("paciente".equals(userType)) {
+                                    navigateToPatientMenu();
+                                }
+                            }
+
+                            @Override
+                            public void onCancelled(DatabaseError databaseError) {
+                                Toast.makeText(Login.this, "Erro ao verificar o tipo de usuário", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    } else {
+                        Toast.makeText(Login.this, "Falha no login: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private void navigateToCaregiverMenu() {
+        Intent intent = new Intent(Login.this, CaregiverMenu.class);
+        startActivity(intent);
+        finish();
+    }
+
+    private void navigateToPatientMenu() {
+        Intent intent = new Intent(Login.this, PatientMenu.class);
+        startActivity(intent);
+        finish();
+    }
+
+    private void navigateToRegister() {
+        Intent intent = new Intent(Login.this, Register.class);
+        startActivity(intent);
+    }
+
+    private void navigateToForgotPassword() {
+        Intent intent = new Intent(Login.this, ForgotPassword.class);
+        startActivity(intent);
     }
 }

@@ -19,7 +19,7 @@
             android:layout_gravity="center_horizontal" />
 
         <TextView
-            android:id="@+id/dateTextView"
+            android:id="@+id/crisisDateView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Date: 2024-01-01"
@@ -27,7 +27,7 @@
             android:layout_marginTop="20dp" />
 
         <TextView
-            android:id="@+id/durationTextView"
+            android:id="@+id/crisisDurationView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Duration: 00:05:30"

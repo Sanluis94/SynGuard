@@ -63,7 +63,7 @@ public class Login extends AppCompatActivity {
                         mDatabase.child("users").child(userId).addListenerForSingleValueEvent(new ValueEventListener() {
                             @Override
                             public void onDataChange(DataSnapshot dataSnapshot) {
-                                String userType = dataSnapshot.child("userType").getValue(String.class);
+                                String userType = dataSnapshot.child("role").getValue(String.class);
                                 if ("cuidador".equals(userType)) {
                                     navigateToCaregiverMenu();
                                 } else if ("paciente".equals(userType)) {

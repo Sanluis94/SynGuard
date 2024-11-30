@@ -14,7 +14,7 @@
         android:layout_centerHorizontal="true" />
 
     <EditText
-        android:id="@+id/otpInput"
+        android:id="@+id/phoneNumberInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Enter OTP"
@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Verify"
-        android:layout_below="@id/otpInput"
+        android:layout_below="@id/phoneNumberInput"
         android:layout_marginTop="20dp"
         android:background="@drawable/rounded_button"
         android:textColor="@color/backgroundColor" />

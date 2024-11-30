@@ -1,46 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/cardview_light_background">
 
     <TextView
-        android:id="@+id/patientMenuTitle"
+        android:id="@+id/tvWelcome"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Patient Menu"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true" />
+        android:text="Bem-vindo, Paciente!"
+        android:textSize="20sp"
+        android:textColor="@color/primaryColor"
+        android:layout_gravity="center"
+        android:paddingBottom="24dp" />
 
     <Button
-        android:id="@+id/startChronometerButton"
+        android:id="@+id/btnStartChronometer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Chronometer"
-        android:layout_below="@id/patientMenuTitle"
-        android:layout_marginTop="20dp"
+        android:text="Iniciar Cronômetro"
+        android:textAllCaps="false"
         android:background="@drawable/rounded_button"
-        android:textColor="@color/backgroundColor" />
+        android:layout_marginBottom="16dp" />
 
     <Button
-        android:id="@+id/viewMedicalDataButton"
+        android:id="@+id/btnBluetooth"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="View Medical Data"
-        android:layout_below="@id/startChronometerButton"
-        android:layout_marginTop="20dp"
+        android:text="Parear Dispositivo Bluetooth"
+        android:textAllCaps="false"
         android:background="@drawable/rounded_button"
-        android:textColor="@color/backgroundColor" />
+        android:layout_marginBottom="16dp" />
 
     <Button
-        android:id="@+id/logoutButton"
+        android:id="@+id/btnViewMedicalData"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Logout"
-        android:layout_below="@id/viewMedicalDataButton"
-        android:layout_marginTop="20dp"
+        android:text="Ver Dados Médicos"
+        android:textAllCaps="false"
         android:background="@drawable/rounded_button"
-        android:textColor="@color/backgroundColor" />
+        android:layout_marginBottom="16dp" />
 
-</RelativeLayout>
+    <Button
+        android:id="@+id/btnViewGraphs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ver Gráficos de Crises"
+        android:textAllCaps="false"
+        android:background="@drawable/rounded_button"
+        android:layout_marginBottom="16dp" />
+
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sair"
+        android:textAllCaps="false"
+        android:background="@drawable/rounded_button" />
+
+</LinearLayout>

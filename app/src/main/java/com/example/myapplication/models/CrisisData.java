@@ -1,42 +1,43 @@
 package com.example.myapplication.models;
 
 public class CrisisData {
-    private int crisisCount;       // Número de crises
-    private long averageTime;      // Tempo médio das crises
-    private long lastCrisisTime;   // Duração da última crise
+    private String caregiverId;
+    private long duration;
+    private int crisisCount;
+    private long averageTime;
+    private long lastCrisisTime;
 
-    public CrisisData() {
-        // Construtor vazio necessário para Firebase
-    }
-
-    public CrisisData(int crisisCount, long averageTime, long lastCrisisTime) {
+    // Construtor completo
+    public CrisisData(String caregiverId, long duration, int crisisCount, long averageTime, long lastCrisisTime) {
+        this.caregiverId = caregiverId;
+        this.duration = duration;
         this.crisisCount = crisisCount;
         this.averageTime = averageTime;
         this.lastCrisisTime = lastCrisisTime;
     }
 
     // Getters e setters
-    public int getCrisisCount() {
-        return crisisCount;
+    public String getCaregiverId() {
+        return caregiverId;
     }
 
-    public void setCrisisCount(int crisisCount) {
-        this.crisisCount = crisisCount;
+    public long getDuration() {
+        return duration;
+    }
+
+    public int getCrisisCount() {
+        return crisisCount;
     }
 
     public long getAverageTime() {
         return averageTime;
     }
 
-    public void setAverageTime(long averageTime) {
-        this.averageTime = averageTime;
-    }
-
     public long getLastCrisisTime() {
         return lastCrisisTime;
     }
-
-    public void setLastCrisisTime(long lastCrisisTime) {
-        this.lastCrisisTime = lastCrisisTime;
+    public String getTimestamp() {
+        return String.valueOf(System.currentTimeMillis()); // Substitua com lógica real
     }
+
 }

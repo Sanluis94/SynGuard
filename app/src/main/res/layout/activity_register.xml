@@ -57,6 +57,13 @@
         android:hint="ID do Cuidador"
         android:visibility="gone" />
 
+    <EditText
+        android:id="@+id/phoneNumberInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Número do cuidador"
+        android:visibility="gone" />
+
     <Button
         android:id="@+id/registerButton"
         android:layout_width="match_parent"

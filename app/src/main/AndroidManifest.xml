@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.myapplication">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.example.myapplication"
+    tools:ignore="CoarseFineLocation">
 
     <uses-feature
         android:name="android.hardware.telephony"
@@ -13,7 +15,8 @@
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        tools:ignore="CoarseFineLocation" />
 
     <application
         android:allowBackup="true"
@@ -23,15 +26,28 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.MyApplication">
 
-        <activity android:name=".activities.VerifyPhone" />
-        <activity android:name=".activities.Register" />
-        <activity android:name=".activities.ForgotPassword" />
-        <activity android:name=".PatientMenu" />
-        <activity android:name=".activities.CaregiverMenu" />
-        <activity android:name=".activities.ChronometerActivity" />
-        <activity android:name=".models.MedicalData" />
-        <activity android:name=".activities.CrisisDetails" />
+        <activity android:name=".activities.VerifyPhone"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".activities.Register"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".activities.ForgotPassword"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".activities.PatientMenu"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".activities.CaregiverMenu"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".activities.ChronometerActivity"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".activities.MedicalData"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".activities.BluetoothDevices"
+            android:theme="@style/Theme.AppCompat.Light"/>
+        <activity android:name=".models.MedicalData"
+            tools:ignore="Instantiatable" />
+        <activity android:name=".activities.CrisisDetails"
+            android:theme="@style/Theme.AppCompat.Light"/>
         <activity android:name=".activities.Login"
+            android:theme="@style/Theme.AppCompat.Light"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

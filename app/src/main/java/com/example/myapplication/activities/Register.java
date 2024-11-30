@@ -12,62 +12,69 @@ import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import com.example.myapplication.R;
+import com.example.myapplication.models.User;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.Random;
 
 public class Register extends Activity {
 
-    private EditText fullNameField, emailField, passwordField, confirmPasswordField, caregiverIdField;
+    private EditText fullNameField, emailField, passwordField, confirmPasswordField, caregiverIdField,phoneNumberField;
     private Button registerButton;
     private RadioGroup userTypeGroup;
     private RadioButton patientRadioButton, caregiverRadioButton;
+
+    private FirebaseAuth mAuth;
+    private DatabaseReference mDatabase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
 
-        // Inicializa os campos e botões
+        // Inicialização dos campos de entrada
         fullNameField = findViewById(R.id.fullNameField);
         emailField = findViewById(R.id.emailField);
         passwordField = findViewById(R.id.passwordField);
         confirmPasswordField = findViewById(R.id.confirmPasswordField);
-        caregiverIdField = findViewById(R.id.caregiverIdField);  // Visível apenas se o tipo for paciente
+        caregiverIdField = findViewById(R.id.caregiverIdField);
+        phoneNumberField = findViewById(R.id.phoneNumberInput);
 
+        // Inicialização dos botões e radio buttons
         userTypeGroup = findViewById(R.id.userTypeGroup);
         patientRadioButton = findViewById(R.id.patientRadioButton);
         caregiverRadioButton = findViewById(R.id.caregiverRadioButton);
 
         registerButton = findViewById(R.id.registerButton);
 
-        // Ação de clique para o botão "Registrar"
-        registerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                registerUser(); // Tenta registrar o usuário
-            }
-        });
+        mAuth = FirebaseAuth.getInstance();
+        mDatabase = FirebaseDatabase.getInstance().getReference();
 
-        // Adiciona lógica para exibir campo de ID do cuidador somente para paciente
+        // Ao selecionar o tipo de usuário, exibe o campo de ID do cuidador se for paciente
         userTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.patientRadioButton) {
-                caregiverIdField.setVisibility(View.VISIBLE);  // Exibe campo de ID do cuidador
+                caregiverIdField.setVisibility(View.VISIBLE);
             } else {
-                caregiverIdField.setVisibility(View.GONE);  // Esconde campo de ID do cuidador
+                caregiverIdField.setVisibility(View.GONE);
             }
         });
+
+        // Ao clicar no botão de registro
+        registerButton.setOnClickListener(v -> registerUser());
     }
 
-    // Método para registrar o usuário
     private void registerUser() {
         String fullName = fullNameField.getText().toString().trim();
         String email = emailField.getText().toString().trim();
         String password = passwordField.getText().toString().trim();
         String confirmPassword = confirmPasswordField.getText().toString().trim();
-        String userType = getUserType();  // Obtém o tipo de usuário (paciente ou cuidador)
+        String userType = getUserType();
         String caregiverId = caregiverIdField.getText().toString().trim();
+        String phoneNumber = phoneNumberField.getText().toString().trim();
 
-        // Verificação de campos obrigatórios
+        // Validação de campos obrigatórios
         if (TextUtils.isEmpty(fullName) || TextUtils.isEmpty(email) || TextUtils.isEmpty(password)
                 || TextUtils.isEmpty(confirmPassword)) {
             Toast.makeText(Register.this, "Preencha todos os campos obrigatórios!", Toast.LENGTH_SHORT).show();
@@ -84,48 +91,75 @@ public class Register extends Activity {
             return;
         }
 
-        // Se o tipo de usuário for cuidador, gerar um ID único
+        // Criação do usuário no Firebase
         if ("cuidador".equals(userType)) {
-            String caregiverUniqueId = generateCaregiverId();
-            // Aqui você pode salvar os dados no Firebase ou em outro banco de dados
-            Toast.makeText(Register.this, "Usuário registrado com sucesso! ID do cuidador: " + caregiverUniqueId, Toast.LENGTH_LONG).show();
-        } else {
-            // Registra o paciente normalmente (não precisa de ID único)
-            Toast.makeText(Register.this, "Paciente registrado com sucesso!", Toast.LENGTH_LONG).show();
-        }
+            String caregiverUniqueId = generateCaregiverId(); // Gera um ID único para cuidadores
+            mAuth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this, task -> {
+                        if (task.isSuccessful()) {
+                            String userId = mAuth.getCurrentUser().getUid();
+                            User newUser = new User(fullName, email, userType, caregiverUniqueId, phoneNumber);
 
-        // Navega para a tela de login após o registro
-        Intent intent = new Intent(Register.this, Login.class);
-        startActivity(intent);
-        finish(); // Finaliza a tela de registro
+                            mDatabase.child("users").child(userId).setValue(newUser)
+                                    .addOnCompleteListener(task1 -> {
+                                        if (task1.isSuccessful()) {
+                                            Toast.makeText(Register.this, "Usuário registrado com sucesso!", Toast.LENGTH_LONG).show();
+                                            navigateToLogin();
+                                        } else {
+                                            Toast.makeText(Register.this, "Erro ao salvar os dados do cuidador.", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        } else {
+                            Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+        } else {
+            mAuth.createUserWithEmailAndPassword(email, password)
+                    .addOnCompleteListener(this, task -> {
+                        if (task.isSuccessful()) {
+                            String userId = mAuth.getCurrentUser().getUid();
+                            User newUser = new User(fullName, email, userType, caregiverId, phoneNumber);
+                            mDatabase.child("users").child(userId).setValue(newUser)
+                                    .addOnCompleteListener(task1 -> {
+                                        if (task1.isSuccessful()) {
+                                            Toast.makeText(Register.this, "Paciente registrado com sucesso!", Toast.LENGTH_LONG).show();
+                                            navigateToLogin();
+                                        } else {
+                                            Toast.makeText(Register.this, "Erro ao salvar os dados do paciente.", Toast.LENGTH_SHORT).show();
+                                        }
+                                    });
+                        } else {
+                            Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                        }
+                    });
+        }
     }
 
-    // Método para gerar um ID único para cuidadores
     private String generateCaregiverId() {
         Random random = new Random();
         StringBuilder caregiverId = new StringBuilder();
 
         // Gerar 4 letras aleatórias
         for (int i = 0; i < 4; i++) {
-            caregiverId.append((char) (random.nextInt(26) + 'A'));
+            caregiverId.append((char) ('A' + random.nextInt(26)));
         }
 
         // Gerar 2 números aleatórios
-        for (int i = 0; i < 2; i++) {
-            caregiverId.append(random.nextInt(10));
-        }
-
+        caregiverId.append(random.nextInt(10)).append(random.nextInt(10));
         return caregiverId.toString();
     }
 
-    // Método para obter o tipo de usuário selecionado
     private String getUserType() {
-        int selectedId = userTypeGroup.getCheckedRadioButtonId();
-        if (selectedId == R.id.patientRadioButton) {
+        if (patientRadioButton.isChecked()) {
             return "paciente";
-        } else if (selectedId == R.id.caregiverRadioButton) {
+        } else {
             return "cuidador";
         }
-        return "";  // Caso nenhum seja selecionado
+    }
+
+    private void navigateToLogin() {
+        Intent intent = new Intent(Register.this, Login.class);
+        startActivity(intent);
+        finish();
     }
 }

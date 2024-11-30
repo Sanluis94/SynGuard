@@ -1,41 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/cardview_light_background">
 
     <TextView
-        android:id="@+id/caregiverMenuTitle"
+        android:id="@+id/tvCaregiverId"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Caregiver Menu"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true" />
+        android:text="ID Cuidador: "
+        android:textSize="18sp"
+        android:paddingBottom="16dp"
+        android:textColor="@color/primaryColor" />
 
     <TextView
-        android:id="@+id/caregiverIdView"
+        android:id="@+id/tvNotification"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="ABCD12"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:layout_centerHorizontal="true" />
+        android:text=""
+        android:textSize="16sp"
+        android:textColor="@color/errorColor"
+        android:paddingBottom="24dp" />
 
     <Button
-        android:id="@+id/viewPatientDataButton"
+        android:id="@+id/btnViewMedicalData"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="View Patient Data"
-        android:layout_below="@id/caregiverMenuTitle"
-        android:layout_marginTop="20dp" />
+        android:text="Ver Dados Médicos"
+        android:textAllCaps="false"
+        android:background="@drawable/rounded_button"
+        android:layout_marginBottom="16dp" />
 
     <Button
-        android:id="@+id/logoutButton"
+        android:id="@+id/btnViewGraphs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Logout"
-        android:layout_below="@id/viewPatientDataButton"
-        android:layout_marginTop="20dp" />
+        android:text="Ver Gráficos de Crises"
+        android:textAllCaps="false"
+        android:background="@drawable/rounded_button"
+        android:layout_marginBottom="16dp" />
 
-</RelativeLayout>
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Sair"
+        android:textAllCaps="false"
+        android:background="@drawable/rounded_button" />
+</LinearLayout>

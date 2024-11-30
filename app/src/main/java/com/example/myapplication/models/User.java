@@ -1,33 +1,21 @@
 package com.example.myapplication.models;
 
 public class User {
-
-    private String userId;
     private String fullName;
     private String email;
-    private String role;
-    private String phone;
+    private String userType;
     private String caregiverId;
+    private String phone;
 
-    public User() {
-    }
-
-    public User(String userId, String fullName, String email, String role, String phone, String caregiverId) {
-        this.userId = userId;
+    public User(String fullName, String email, String userType, String caregiverId, String phone) {
         this.fullName = fullName;
         this.email = email;
-        this.role = role;
-        this.phone = phone;
+        this.userType = userType;
         this.caregiverId = caregiverId;
+        this.phone = phone;
     }
 
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
+    // Getters e setters
 
     public String getFullName() {
         return fullName;
@@ -46,11 +34,19 @@ public class User {
     }
 
     public String getRole() {
-        return role;
+        return userType;
     }
 
     public void setRole(String role) {
-        this.role = role;
+        this.userType = role;
+    }
+
+    public String getCaregiverId() {
+        return caregiverId;
+    }
+
+    public void setCaregiverId(String caregiverId) {
+        this.caregiverId = caregiverId;
     }
 
     public String getPhone() {
@@ -61,11 +57,23 @@ public class User {
         this.phone = phone;
     }
 
-    public String getCaregiverId() {
-        return caregiverId;
-    }
+    // Método auxiliar para gerar o ID único do cuidador
+    public static String generateCaregiverId() {
+        String letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        StringBuilder id = new StringBuilder();
 
-    public void setCaregiverId(String caregiverId) {
-        this.caregiverId = caregiverId;
+        // Gerar 4 letras aleatórias
+        for (int i = 0; i < 4; i++) {
+            int index = (int) (Math.random() * letters.length());
+            id.append(letters.charAt(index));
+        }
+
+        // Gerar 2 números aleatórios
+        for (int i = 0; i < 2; i++) {
+            int digit = (int) (Math.random() * 10);
+            id.append(digit);
+        }
+
+        return id.toString();
     }
 }

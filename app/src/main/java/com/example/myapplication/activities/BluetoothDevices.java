@@ -28,7 +28,7 @@ public class BluetoothDevices extends AppCompatActivity {
     private BluetoothDevice bluetoothDevice;
     private Handler handler;
     private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // UUID do HC-05
-    private static final String DEVICE_ADDRESS = "XX:XX:XX:XX:XX:XX"; // Substitua com o endereço MAC do seu HC-05
+    private static final String DEVICE_ADDRESS = "00:21:13:01:0A:F4"; // Substitua com o endereço MAC do seu HC-05
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

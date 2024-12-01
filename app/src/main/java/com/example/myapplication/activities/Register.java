@@ -3,6 +3,8 @@ package com.example.myapplication.activities;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputFilter;
+import android.text.Spanned;
 import android.text.TextUtils;
 import android.util.Patterns;
 import android.view.View;
@@ -17,8 +19,6 @@ import com.example.myapplication.models.User;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-
-import java.util.Random;
 
 public class Register extends Activity {
 
@@ -42,6 +42,17 @@ public class Register extends Activity {
         confirmPasswordField = findViewById(R.id.confirmPasswordField);
         caregiverIdField = findViewById(R.id.caregiverIdField);
         phoneNumberField = findViewById(R.id.phoneNumberInput);
+
+        // Restringir a entrada do campo de telefone para números apenas
+        phoneNumberField.setFilters(new InputFilter[]{new InputFilter.LengthFilter(15), new InputFilter() {
+            @Override
+            public CharSequence filter(CharSequence source, int start, int end, Spanned dest, int dstart, int dend) {
+                if (source != null && !source.toString().matches("[0-9]+")) {
+                    return ""; // Impede a entrada de caracteres não numéricos
+                }
+                return null; // Permite a entrada de números
+            }
+        }});
 
         // Inicialização dos botões e radio buttons
         userTypeGroup = findViewById(R.id.userTypeGroup);
@@ -99,6 +110,13 @@ public class Register extends Activity {
                 Toast.makeText(Register.this, "O número de telefone é obrigatório para cuidadores!", Toast.LENGTH_SHORT).show();
                 return;
             }
+
+            // Validar se o número tem 10 ou 11 dígitos
+            if (phoneNumber.length() < 10 || phoneNumber.length() > 11) {
+                Toast.makeText(Register.this, "Digite um número de telefone válido com 10 ou 11 dígitos!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             if (!Patterns.PHONE.matcher(phoneNumber).matches()) {
                 Toast.makeText(Register.this, "Digite um número de telefone válido!", Toast.LENGTH_SHORT).show();
                 return;

@@ -212,7 +212,7 @@ public class ChronometerActivity extends AppCompatActivity {
         }
 
         try {
-            BluetoothDevice device = bluetoothAdapter.getRemoteDevice("00:00:00:00:00:00"); // Substitua pelo endereço do HC-05
+            BluetoothDevice device = bluetoothAdapter.getRemoteDevice("00:21:13:01:0A:F4"); // Substitua pelo endereço do HC-05
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 return;
             }

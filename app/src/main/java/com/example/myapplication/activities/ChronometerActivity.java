@@ -1,8 +1,8 @@
 package com.example.myapplication.activities;
 
 import android.Manifest;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -24,7 +24,9 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.io.IOException;
 import java.util.Calendar;
+import java.util.UUID;
 
 public class ChronometerActivity extends AppCompatActivity {
 
@@ -37,6 +39,9 @@ public class ChronometerActivity extends AppCompatActivity {
     private long lastCrisisTime = 0L;
     private long averageTime = 0L;
 
+    private BluetoothDevice bluetoothDevice;  // Para armazenar o dispositivo Bluetooth
+    private BluetoothSocket bluetoothSocket;  // Para a conexão Bluetooth
+
     private DatabaseReference databaseReference;
 
     private static final int SMS_PERMISSION_REQUEST = 1;
@@ -48,6 +53,14 @@ public class ChronometerActivity extends AppCompatActivity {
 
         chronometer = findViewById(R.id.chronometer);
         startStopButton = findViewById(R.id.startStopButton);
+
+        // Recuperar o dispositivo Bluetooth a partir do Intent
+        bluetoothDevice = getIntent().getParcelableExtra("bluetoothDevice");
+
+        if (bluetoothDevice != null) {
+            // Conectar ao dispositivo Bluetooth
+            connectToBluetoothDevice(bluetoothDevice);
+        }
 
         databaseReference = FirebaseDatabase.getInstance().getReference("users");
 
@@ -131,6 +144,22 @@ public class ChronometerActivity extends AppCompatActivity {
         } catch (Exception e) {
             Log.e("ChronometerActivity", "Erro ao enviar mensagem: " + e.getMessage());
             Toast.makeText(this, "Erro ao enviar mensagem.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void connectToBluetoothDevice(BluetoothDevice device) {
+        try {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, SMS_PERMISSION_REQUEST);
+                return;
+            }
+
+            bluetoothSocket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+            bluetoothSocket.connect();
+            Log.d("ChronometerActivity", "Conectado ao dispositivo Bluetooth.");
+        } catch (IOException e) {
+            Log.e("ChronometerActivity", "Erro ao conectar ao Bluetooth: " + e.getMessage());
+            Toast.makeText(this, "Erro ao conectar ao dispositivo Bluetooth", Toast.LENGTH_SHORT).show();
         }
     }
 

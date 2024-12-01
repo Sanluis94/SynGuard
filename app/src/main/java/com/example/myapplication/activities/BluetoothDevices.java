@@ -111,6 +111,16 @@ public class BluetoothDevices extends AppCompatActivity {
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 if (device != null) {
+                    if (ActivityCompat.checkSelfPermission(BluetoothDevices.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return;
+                    }
                     String deviceName = device.getName();
                     String deviceAddress = device.getAddress(); // Endereço MAC
 
@@ -139,17 +149,13 @@ public class BluetoothDevices extends AppCompatActivity {
             bluetoothSocket.connect();
             statusTextView.setText("Conectado ao dispositivo Bluetooth.");
 
-            // Agora você pode iniciar o cronômetro
-            startChronometer();
+            // Agora você pode enviar um comando para iniciar o cronômetro na tela do cronômetro
+            Intent intent = new Intent(BluetoothDevices.this, ChronometerActivity.class);
+            startActivity(intent);  // Navegar para a tela do cronômetro
         } catch (IOException e) {
             statusTextView.setText("Falha ao conectar ao dispositivo.");
             e.printStackTrace();
         }
-    }
-
-    private void startChronometer() {
-        // Aqui você pode integrar a lógica do cronômetro ou outra funcionalidade desejada.
-        Toast.makeText(this, "Cronômetro iniciado!", Toast.LENGTH_SHORT).show();
     }
 
     @Override

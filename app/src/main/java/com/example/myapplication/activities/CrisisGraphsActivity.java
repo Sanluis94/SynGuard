@@ -3,20 +3,17 @@ package com.example.myapplication.activities;
 import android.os.Bundle;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
 import com.example.myapplication.models.CrisisData;
-import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.components.Description;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.formatter.ValueFormatter;
+
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -28,93 +25,126 @@ import java.util.List;
 
 public class CrisisGraphsActivity extends AppCompatActivity {
 
-    private BarChart barChartCrises;
-    private LineChart lineChartAverageTime;
-    private DatabaseReference crisisDataRef;
+    private LineChart lineChartCrises;
+    private List<CrisisData> crisisDataList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_crisis_graphs);
 
-        barChartCrises = findViewById(R.id.barChartCrises);
-        lineChartAverageTime = findViewById(R.id.lineChartAverageTime);
+        lineChartCrises = findViewById(R.id.lineChartCrises);
+        crisisDataList = new ArrayList<>();
 
-        // Obtenção do ID do paciente e do cuidador
-        String caregiverId = "caregiverId123"; // ID do cuidador, pode ser obtido a partir do login
-        String patientId = "patientId456"; // ID do paciente, pode ser obtido a partir do login
+        // Carregar dados das crises
+        loadCrisisData();
+    }
 
-        // Firebase reference
-        crisisDataRef = FirebaseDatabase.getInstance().getReference("users")
-                .child(caregiverId) // ID do cuidador
-                .child("patients")
-                .child(patientId) // ID do paciente
+    private void loadCrisisData() {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (userId == null) {
+            Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Acessar o nó do Firebase que contém as crises do usuário
+        DatabaseReference crisisRef = FirebaseDatabase.getInstance().getReference("users")
+                .child(userId)
                 .child("crisisData");
 
-        loadGraphData();
-    }
-
-    private void loadGraphData() {
-        crisisDataRef.orderByChild("timestamp") // Ordena pela data (timestamp)
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        List<BarEntry> barEntries = new ArrayList<>();
-                        List<Entry> lineEntries = new ArrayList<>();
-                        int index = 0;
-
-                        for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-                            CrisisData crisisData = dataSnapshot.getValue(CrisisData.class);
-
-                            if (crisisData != null) {
-                                // Adicionando entradas para o gráfico de barras (crises por mês)
-                                barEntries.add(new BarEntry(index, crisisData.getCrisisCount()));
-
-                                // Adicionando entradas para o gráfico de linha (tempo médio das crises)
-                                float averageTimeInMinutes = (float) crisisData.getAverageTime() / 60;  // Convertendo de segundos para minutos
-                                lineEntries.add(new Entry(index, averageTimeInMinutes));
-
-                                index++;
+        // Escuta para os dados do Firebase com ano, mês e dia
+        crisisRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot yearSnapshot : dataSnapshot.getChildren()) {
+                        for (DataSnapshot monthSnapshot : yearSnapshot.getChildren()) {
+                            for (DataSnapshot daySnapshot : monthSnapshot.getChildren()) {
+                                for (DataSnapshot crisisSnapshot : daySnapshot.getChildren()) {
+                                    CrisisData crisisData = crisisSnapshot.getValue(CrisisData.class);
+                                    if (crisisData != null) {
+                                        crisisDataList.add(crisisData);  // Adiciona os dados da crise à lista
+                                    }
+                                }
                             }
                         }
-
-                        // Atualizando os gráficos
-                        updateBarChart(barEntries);
-                        updateLineChart(lineEntries);
                     }
-
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar dados.", Toast.LENGTH_SHORT).show();
+                    // Após carregar os dados, atualiza o gráfico
+                    if (crisisDataList.isEmpty()) {
+                        updateGraphWithNoData();
+                    } else {
+                        updateGraph();
                     }
-                });
+                } else {
+                    Toast.makeText(CrisisGraphsActivity.this, "Nenhuma crise registrada para este usuário", Toast.LENGTH_SHORT).show();
+                    updateGraphWithNoData();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar os dados", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
-    private void updateBarChart(List<BarEntry> barEntries) {
-        BarDataSet barDataSet = new BarDataSet(barEntries, "Número de Crises");
-        barDataSet.setColor(getResources().getColor(R.color.purple_200));
-        BarData barData = new BarData(barDataSet);
-        barChartCrises.setData(barData);
+    private void updateGraph() {
+        // Listas para armazenar os dados de número de crises e tempo médio
+        List<Entry> crisisEntries = new ArrayList<>();
+        List<Entry> averageTimeEntries = new ArrayList<>();
 
-        Description description = new Description();
-        description.setText("Número de Crises por Mês");
-        barChartCrises.setDescription(description);
+        // Agora estamos utilizando a lista de crises carregada
+        for (int i = 0; i < crisisDataList.size(); i++) {
+            CrisisData crisis = crisisDataList.get(i);
+            int crisisCount = crisis.getCrisisCount();
+            long averageTime = crisis.getAverageTime();
 
-        barChartCrises.invalidate();
+            // Adiciona o número de crises (eixo X)
+            crisisEntries.add(new Entry(i, crisisCount));
+            // Adiciona o tempo médio das crises (eixo Y)
+            averageTimeEntries.add(new Entry(i, averageTime));
+        }
+
+        // Criando os dados de linha para o gráfico
+        LineDataSet crisisDataSet = new LineDataSet(crisisEntries, "Número de Crises");
+        LineDataSet averageTimeDataSet = new LineDataSet(averageTimeEntries, "Tempo Médio (segundos)");
+
+        // Definindo cores diferentes para as linhas
+        crisisDataSet.setColor(getResources().getColor(R.color.primaryColor));
+        averageTimeDataSet.setColor(getResources().getColor(R.color.accentColor));
+
+        // Adicionando os dados ao gráfico
+        LineData lineData = new LineData(crisisDataSet, averageTimeDataSet);
+        lineChartCrises.setData(lineData);
+        lineChartCrises.invalidate(); // Atualiza o gráfico
+
+        // Definindo formatação para o valor mostrado nas linhas (opcional)
+        crisisDataSet.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return String.valueOf((int) value); // Formatar como inteiro para número de crises
+            }
+        });
+
+        averageTimeDataSet.setValueFormatter(new ValueFormatter() {
+            @Override
+            public String getFormattedValue(float value) {
+                return String.valueOf((int) value); // Formatar como inteiro para tempo médio
+            }
+        });
     }
 
-    private void updateLineChart(List<Entry> lineEntries) {
-        LineDataSet lineDataSet = new LineDataSet(lineEntries, "Tempo Médio (minutos)");
-        lineDataSet.setColor(getResources().getColor(R.color.teal_200));
-        lineDataSet.setCircleColor(getResources().getColor(R.color.teal_200));
+    private void updateGraphWithNoData() {
+        // Caso não haja dados, exibe o gráfico vazio com uma mensagem
+        List<Entry> entries = new ArrayList<>();
+        entries.add(new Entry(0, 0)); // Exemplo: gráfico vazio com um valor de 0
 
+        LineDataSet lineDataSet = new LineDataSet(entries, "Número de Crises");
         LineData lineData = new LineData(lineDataSet);
-        lineChartAverageTime.setData(lineData);
 
-        Description description = new Description();
-        description.setText("Tempo Médio das Crises");
-        lineChartAverageTime.setDescription(description);
+        lineChartCrises.setData(lineData);
+        lineChartCrises.invalidate(); // Atualiza o gráfico
 
-        lineChartAverageTime.invalidate();
+        Toast.makeText(this, "Sem dados de crises para exibir no gráfico", Toast.LENGTH_SHORT).show();
     }
 }

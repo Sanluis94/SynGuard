@@ -1,45 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp">
+    tools:context=".activities.MedicalData">
 
+    <!-- Contagem Total de Crises -->
     <TextView
         android:id="@+id/tvCrisisCount"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Número de crises:"
+        android:text="Total de Crises: 0"
         android:textSize="18sp"
-        android:layout_marginBottom="8dp" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="32dp"
+        android:paddingStart="16dp"/>
 
+    <!-- Tempo Médio das Crises -->
     <TextView
         android:id="@+id/tvAverageTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Tempo médio das crises:"
+        android:text="Tempo Médio das Crises: N/A"
         android:textSize="18sp"
-        android:layout_marginBottom="8dp" />
+        app:layout_constraintTop_toBottomOf="@id/tvCrisisCount"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="16dp"
+        android:paddingStart="16dp"/>
 
+    <!-- Última Crise -->
     <TextView
         android:id="@+id/tvLastCrisisTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Tempo da última crise:"
+        android:text="Última Crise: N/A"
         android:textSize="18sp"
-        android:layout_marginBottom="16dp" />
+        app:layout_constraintTop_toBottomOf="@id/tvAverageTime"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="16dp"
+        android:paddingStart="16dp"/>
 
-    <Button
-        android:id="@+id/btnViewMonthlyData"
-        android:layout_width="match_parent"
+    <!-- Mensagem quando não há dados -->
+    <TextView
+        android:id="@+id/tvNoData"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Ver Dados Mensais"
-        android:layout_marginTop="16dp" />
+        android:text="Sem dados de crise para este paciente."
+        android:textSize="16sp"
+        android:textColor="@android:color/holo_red_dark"
+        app:layout_constraintTop_toBottomOf="@id/tvLastCrisisTime"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="32dp"
+        android:paddingStart="16dp"/>
 
-
-    <Button
-        android:id="@+id/btnBackToMenu"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Voltar ao Menu" />
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

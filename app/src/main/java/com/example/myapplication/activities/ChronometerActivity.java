@@ -1,12 +1,5 @@
 package com.example.myapplication.activities;
 
-import android.Manifest;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -18,9 +11,6 @@ import android.widget.Chronometer;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-
 import com.example.myapplication.R;
 import com.example.myapplication.models.CrisisData;
 import com.google.firebase.auth.FirebaseAuth;
@@ -28,32 +18,18 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Calendar;
-import java.util.UUID;
 
 public class ChronometerActivity extends AppCompatActivity {
 
     private Chronometer chronometer;
-    private Button startStopButton, bluetoothButton;
+    private Button startStopButton;
     private boolean isRunning = false;
     private long pauseOffset = 0;
 
     private static int crisisCount = 0;
     private long totalCrisisTime = 0L; // Para calcular a média
     private long lastCrisisTime = 0L;
-
-    // Bluetooth
-    private BluetoothAdapter bluetoothAdapter;
-    private BluetoothSocket bluetoothSocket;
-    private InputStream inputStream;
-    private OutputStream outputStream;
-    private static final UUID MODULE_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private static final String TAG = "ChronometerActivity";
-    private Handler handler = new Handler();
-    private boolean bluetoothConnected = false;
 
     // Firebase
     private DatabaseReference databaseReference;
@@ -69,7 +45,6 @@ public class ChronometerActivity extends AppCompatActivity {
         databaseReference = FirebaseDatabase.getInstance().getReference("crisisData");
 
         startStopButton.setOnClickListener(view -> toggleChronometer());
-        bluetoothButton.setOnClickListener(view -> connectBluetooth());
     }
 
     private void toggleChronometer() {
@@ -86,9 +61,10 @@ public class ChronometerActivity extends AppCompatActivity {
         isRunning = true;
         startStopButton.setText("Stop");
 
-        sendNotificationToCaregiver();
+        sendNotificationToCaregiver(); // Envia o SMS ao iniciar o cronômetro
         Toast.makeText(this, "Cronômetro iniciado", Toast.LENGTH_SHORT).show();
     }
+
 
     private void stopAndSaveData() {
         chronometer.stop();
@@ -115,7 +91,7 @@ public class ChronometerActivity extends AppCompatActivity {
     private void saveDataToFirebase(long duration, long averageTime) {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         if (userId == null) {
-            Log.e(TAG, "Usuário não autenticado.");
+            Log.e("ChronometerActivity", "Usuário não autenticado.");
             Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -140,11 +116,11 @@ public class ChronometerActivity extends AppCompatActivity {
         crisisRef.setValue(crisisData)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Dados salvos com sucesso.", Toast.LENGTH_SHORT).show();
-                    Log.d(TAG, "Dados da crise salvos no Firebase.");
+                    Log.d("ChronometerActivity", "Dados da crise salvos no Firebase.");
                 })
                 .addOnFailureListener(e -> {
                     Toast.makeText(this, "Erro ao salvar dados.", Toast.LENGTH_SHORT).show();
-                    Log.e(TAG, "Erro ao salvar dados: " + e.getMessage());
+                    Log.e("ChronometerActivity", "Erro ao salvar dados: " + e.getMessage());
                 });
     }
 
@@ -169,17 +145,17 @@ public class ChronometerActivity extends AppCompatActivity {
                                 if (phoneNumber != null && !phoneNumber.isEmpty()) {
                                     sendSmsToCaregiver(phoneNumber);
                                 } else {
-                                    Log.e(TAG, "Número de telefone do cuidador não está disponível.");
+                                    Log.e("ChronometerActivity", "Número de telefone do cuidador não está disponível.");
                                 }
                                 break;
                             }
                         }
                     } else {
-                        Log.e(TAG, "Erro ao buscar cuidador: " + caregiverTask.getException());
+                        Log.e("ChronometerActivity", "Erro ao buscar cuidador: " + caregiverTask.getException());
                     }
                 });
             } else {
-                Log.e(TAG, "Erro ao buscar paciente: " + task.getException());
+                Log.e("ChronometerActivity", "Erro ao buscar paciente: " + task.getException());
             }
         });
     }
@@ -191,59 +167,8 @@ public class ChronometerActivity extends AppCompatActivity {
             smsManager.sendTextMessage(phoneNumber, null, message, null, null);
             Toast.makeText(this, "SMS enviado ao cuidador", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Log.e(TAG, "Erro ao enviar SMS: " + e.getMessage());
+            Log.e("ChronometerActivity", "Erro ao enviar SMS: " + e.getMessage());
             Toast.makeText(this, "Falha ao enviar SMS", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void connectBluetooth() {
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth não suportado", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (!bluetoothAdapter.isEnabled()) {
-            Toast.makeText(this, "Ative o Bluetooth", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        try {
-            BluetoothDevice device = bluetoothAdapter.getRemoteDevice("00:21:13:01:0A:F4"); // Substitua pelo endereço do HC-05
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                return;
-            }
-            bluetoothSocket = device.createRfcommSocketToServiceRecord(MODULE_UUID);
-            bluetoothSocket.connect();
-
-            inputStream = bluetoothSocket.getInputStream();
-            outputStream = bluetoothSocket.getOutputStream();
-            bluetoothConnected = true;
-
-            Toast.makeText(this, "Conexão Bluetooth estabelecida", Toast.LENGTH_SHORT).show();
-
-            // Loop de leitura Bluetooth
-            new Thread(() -> {
-                try {
-                    while (bluetoothConnected) {
-                        int bytesAvailable = inputStream.available();
-                        if (bytesAvailable > 0) {
-                            byte[] buffer = new byte[bytesAvailable];
-                            inputStream.read(buffer);
-                            String receivedData = new String(buffer, 0, bytesAvailable);
-                            // Processa dados recebidos aqui (ex: inicia cronômetro)
-                            Log.d(TAG, "Dados recebidos: " + receivedData);
-                        }
-                    }
-                } catch (IOException e) {
-                    Log.e(TAG, "Erro de leitura Bluetooth: " + e.getMessage());
-                    bluetoothConnected = false;
-                    Toast.makeText(this, "Erro na conexão Bluetooth", Toast.LENGTH_SHORT).show();
-                }
-            }).start();
-        } catch (IOException e) {
-            Log.e(TAG, "Erro ao conectar ao Bluetooth: " + e.getMessage());
-            Toast.makeText(this, "Erro ao conectar ao Bluetooth", Toast.LENGTH_SHORT).show();
         }
     }
 

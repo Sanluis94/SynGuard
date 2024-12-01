@@ -104,8 +104,8 @@ public class Register extends Activity {
             return;
         }
 
-        // Validação do formato do número de telefone
-        if (!isPhoneNumberValid(phoneNumber)) {
+        // Validação do formato do número de telefone apenas para cuidadores
+        if ("cuidador".equals(userType) && !isPhoneNumberValid(phoneNumber)) {
             Toast.makeText(Register.this, "Número de telefone inválido! O formato correto é (xx) xxxxx-xxxx.", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -228,3 +228,4 @@ public class Register extends Activity {
         return matcher.matches();
     }
 }
+

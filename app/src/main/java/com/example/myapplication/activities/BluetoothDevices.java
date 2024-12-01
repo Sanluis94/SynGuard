@@ -64,130 +64,72 @@ public class BluetoothDevices extends AppCompatActivity {
         if (bluetoothAdapter == null) {
             Toast.makeText(this, "Bluetooth não disponível no dispositivo.", Toast.LENGTH_SHORT).show();
             finish();
+            return;
         }
 
-        // Verificar se o Bluetooth está ativado
         if (!bluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, 1);
         }
 
-        // Verificar permissões para Bluetooth
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        handler = new Handler();
 
+        // Verifica se as permissões de Bluetooth e localização estão concedidas
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.BLUETOOTH_SCAN,
-                    Manifest.permission.BLUETOOTH_CONNECT,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            }, PERMISSION_REQUEST_CODE);
+                    Manifest.permission.BLUETOOTH,
+                    Manifest.permission.BLUETOOTH_ADMIN,
+                    Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_CODE);
         } else {
-            startBluetoothScan();
+            discoverBluetoothDevices();
         }
     }
 
-    // Método para iniciar a busca por dispositivos Bluetooth
-    private void startBluetoothScan() {
-        // Atualizar UI
-        statusTextView.setText("Procurando dispositivos...");
+    private void discoverBluetoothDevices() {
         progressBar.setVisibility(ProgressBar.VISIBLE);
+        statusTextView.setText("Procurando dispositivos Bluetooth...");
 
-        // Registrar o receptor para detectar dispositivos Bluetooth
+        // Register for discovering Bluetooth devices
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(broadcastReceiver, filter);
-
-        // Iniciar a busca por dispositivos Bluetooth
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
+        registerReceiver(bluetoothReceiver, filter);
         bluetoothAdapter.startDiscovery();
     }
 
-    // BroadcastReceiver para lidar com os dispositivos encontrados
-    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver bluetoothReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                if (ActivityCompat.checkSelfPermission(BluetoothDevices.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
                 String deviceName = device.getName();
-                String deviceAddress = device.getAddress();
-
-                // Adicionar dispositivo à lista
-                if (deviceName != null && !devicesList.contains(deviceName)) {
-                    devicesList.add(deviceName + " (" + deviceAddress + ")");
-                    devicesAdapter.notifyDataSetChanged();
-                }
-
-                // Conectar ao HC-05 se encontrado
-                if (deviceName != null && deviceName.equals("HC-05")) { // Nome do dispositivo HC-05
-                    bluetoothDevice = device;
-                    connectToDevice();
-                }
+                String deviceAddress = device.getAddress(); // Endereço MAC
+                devicesList.add(deviceName + "\n" + deviceAddress);
+                devicesAdapter.notifyDataSetChanged();
             }
         }
     };
 
-    // Método para conectar ao dispositivo Bluetooth
     private void connectToDevice() {
-        new Thread(() -> {
-            try {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    return;
-                }
-                bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(MY_UUID);
-                bluetoothSocket.connect();
-                handler.post(() -> {
-                    Toast.makeText(BluetoothDevices.this, "Conectado ao HC-05", Toast.LENGTH_SHORT).show();
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(DEVICE_ADDRESS);
 
-                    // Enviar comando para iniciar o cronômetro
-                    sendStartChronometerCommand();
-                });
-            } catch (IOException e) {
-                handler.post(() -> Toast.makeText(BluetoothDevices.this, "Falha ao conectar", Toast.LENGTH_SHORT).show());
-            }
-        }).start();
-    }
-
-    private void sendStartChronometerCommand() {
         try {
-            if (bluetoothSocket != null && bluetoothSocket.isConnected()) {
-                // Enviar comando para iniciar o cronômetro, pode ser um simples caractere ou string
-                bluetoothSocket.getOutputStream().write("START_CRONOMETER".getBytes());
-            }
+            bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
+            bluetoothSocket.connect();
+            statusTextView.setText("Conectado ao dispositivo Bluetooth.");
+
+            // Agora você pode iniciar o cronômetro
+            startChronometer();
         } catch (IOException e) {
+            statusTextView.setText("Falha ao conectar ao dispositivo.");
             e.printStackTrace();
         }
     }
 
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (bluetoothSocket != null) {
-            try {
-                bluetoothSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        unregisterReceiver(broadcastReceiver); // Não se esqueça de desregistrar o receptor de broadcast
-    }
-
-    // Lidar com a resposta da solicitação de permissão
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startBluetoothScan();
-            } else {
-                Toast.makeText(this, "Permissões de Bluetooth necessárias.", Toast.LENGTH_SHORT).show();
-            }
-        }
+    private void startChronometer() {
+        // Você pode iniciar o cronômetro aqui. Utilize a mesma lógica que estava no ChronometerActivity.
+        // Ou você pode passar essa lógica para o BluetoothDevices caso seja necessário iniciar o cronômetro
+        // diretamente a partir dessa activity.
     }
 }

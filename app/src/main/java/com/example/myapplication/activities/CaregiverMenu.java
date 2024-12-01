@@ -13,6 +13,7 @@ import com.example.myapplication.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
@@ -35,8 +36,26 @@ public class CaregiverMenu extends Activity {
         btnLogout = findViewById(R.id.btnLogout);
 
         // Obter ID do cuidador (assumindo que ele foi salvo durante o login)
-        caregiverId = FirebaseAuth.getInstance().getUid();
-        tvCaregiverId.setText("ID Cuidador: " + caregiverId);
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        DatabaseReference caregiverRef = FirebaseDatabase.getInstance().getReference("users").child(userId).child("caregiverId");
+
+        // Usar listener para pegar o caregiverId
+        caregiverRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                if (snapshot.exists()) {
+                    caregiverId = snapshot.getValue(String.class);
+                    tvCaregiverId.setText("ID Cuidador: " + caregiverId);
+                } else {
+                    Toast.makeText(CaregiverMenu.this, "ID do cuidador não encontrado.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(CaregiverMenu.this, "Erro ao carregar o ID do cuidador.", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         // Configurando listener de notificação para o cronômetro
         listenForCronometerStart();
@@ -61,26 +80,29 @@ public class CaregiverMenu extends Activity {
     }
 
     private void listenForCronometerStart() {
-        FirebaseDatabase.getInstance().getReference("CronometerStatus")
-                .child(caregiverId)
-                .addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(@NonNull DataSnapshot snapshot) {
-                        if (snapshot.exists()) {
-                            Boolean isRunning = snapshot.getValue(Boolean.class);
-                            if (isRunning != null && isRunning) {
-                                tvNotification.setText("Aviso: O cronômetro foi iniciado!");
-                                Toast.makeText(CaregiverMenu.this, "O paciente iniciou o cronômetro.", Toast.LENGTH_SHORT).show();
-                            } else {
-                                tvNotification.setText("");
+        // Verificar o status do cronômetro (este código ainda está dependendo do caregiverId corretamente obtido)
+        if (caregiverId != null) {
+            FirebaseDatabase.getInstance().getReference("CronometerStatus")
+                    .child(caregiverId)
+                    .addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            if (snapshot.exists()) {
+                                Boolean isRunning = snapshot.getValue(Boolean.class);
+                                if (isRunning != null && isRunning) {
+                                    tvNotification.setText("Aviso: O cronômetro foi iniciado!");
+                                    Toast.makeText(CaregiverMenu.this, "O paciente iniciou o cronômetro.", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    tvNotification.setText("");
+                                }
                             }
                         }
-                    }
 
-                    @Override
-                    public void onCancelled(@NonNull DatabaseError error) {
-                        Toast.makeText(CaregiverMenu.this, "Erro ao verificar status do cronômetro.", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Toast.makeText(CaregiverMenu.this, "Erro ao verificar status do cronômetro.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        }
     }
 }

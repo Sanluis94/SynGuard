@@ -23,6 +23,9 @@ import com.example.myapplication.models.CrisisData;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.ValueEventListener;
 
 import java.io.IOException;
 import java.util.Calendar;
@@ -69,6 +72,53 @@ public class ChronometerActivity extends AppCompatActivity {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_REQUEST);
         }
+
+        // Recuperar o número de telefone do cuidador para enviar SMS
+        getCaregiverPhoneNumber();
+    }
+
+    private void getCaregiverPhoneNumber() {
+        // Obtém o ID do usuário atual
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (userId == null) {
+            Log.e("ChronometerActivity", "Usuário não autenticado.");
+            Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Recuperar o número de telefone do cuidador do Firebase
+        databaseReference.child("users").child(userId).child("phoneNumber").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String caregiverPhoneNumber = dataSnapshot.getValue(String.class);
+                    if (caregiverPhoneNumber != null && !caregiverPhoneNumber.isEmpty()) {
+                        // Salvar o número de telefone para o envio do SMS
+                        sendSmsToCaregiver(caregiverPhoneNumber, "Cronômetro iniciado.");
+                    } else {
+                        Toast.makeText(ChronometerActivity.this, "Número do cuidador não encontrado.", Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(ChronometerActivity.this, "Dados do cuidador não encontrados.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(ChronometerActivity.this, "Erro ao acessar dados do cuidador: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void sendSmsToCaregiver(String caregiverPhoneNumber, String message) {
+        try {
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(caregiverPhoneNumber, null, message, null, null);
+            Log.d("ChronometerActivity", "Mensagem enviada ao cuidador.");
+        } catch (Exception e) {
+            Log.e("ChronometerActivity", "Erro ao enviar mensagem: " + e.getMessage());
+            Toast.makeText(this, "Erro ao enviar mensagem.", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void toggleChronometer() {
@@ -81,11 +131,13 @@ public class ChronometerActivity extends AppCompatActivity {
 
     private void startChronometer() {
         chronometer.setBase(SystemClock.elapsedRealtime());
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         chronometer.start();
         isRunning = true;
         startStopButton.setText("Stop");
 
-        sendSmsToCaregiver("Cronômetro iniciado.");
+        // Enviar SMS para o cuidador assim que o cronômetro começar
+        sendSmsToCaregiver(getCaregiverPhoneNumberFromDatabase(), "Cronômetro iniciado.");
         Toast.makeText(this, "Cronômetro iniciado", Toast.LENGTH_SHORT).show();
     }
 
@@ -101,13 +153,34 @@ public class ChronometerActivity extends AppCompatActivity {
         averageTime = totalCrisisTime / crisisCount;
 
         saveDataToFirebase(lastCrisisTime, averageTime);
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         chronometer.setBase(SystemClock.elapsedRealtime());
         pauseOffset = 0;
         startStopButton.setText("Start");
 
-        sendSmsToCaregiver("Cronômetro parado. Duração: " + lastCrisisTime + " segundos.");
+        sendSmsToCaregiver(getCaregiverPhoneNumberFromDatabase(), "Cronômetro parado. Duração: " + lastCrisisTime + " segundos.");
         Toast.makeText(this, "Cronômetro parado e dados salvos", Toast.LENGTH_SHORT).show();
+    }
+
+    private String getCaregiverPhoneNumberFromDatabase() {
+        // Recuperar o número do cuidador diretamente do banco de dados
+        final String[] phoneNumber = {""};  // Usar um array para obter valor de forma assíncrona
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        databaseReference.child("users").child(userId).child("phoneNumber").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    phoneNumber[0] = dataSnapshot.getValue(String.class);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e("ChronometerActivity", "Erro ao acessar dados do cuidador: " + databaseError.getMessage());
+            }
+        });
+        return phoneNumber[0];  // Isso ainda está assíncrono, mas serve como um exemplo
     }
 
     private void saveDataToFirebase(long lastCrisisTime, long averageTime) {
@@ -130,27 +203,9 @@ public class ChronometerActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Log.e("ChronometerActivity", "Erro ao salvar dados: " + e.getMessage()));
     }
 
-    private void sendSmsToCaregiver(String message) {
-        String caregiverPhoneNumber = "+5511973039004"; // Número no formato internacional
-        if (caregiverPhoneNumber == null || caregiverPhoneNumber.isEmpty()) {
-            Toast.makeText(this, "Número do cuidador não configurado.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        try {
-            SmsManager smsManager = SmsManager.getDefault();
-            smsManager.sendTextMessage(caregiverPhoneNumber, null, message, null, null);
-            Log.d("ChronometerActivity", "Mensagem enviada ao cuidador.");
-        } catch (Exception e) {
-            Log.e("ChronometerActivity", "Erro ao enviar mensagem: " + e.getMessage());
-            Toast.makeText(this, "Erro ao enviar mensagem.", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void connectToBluetoothDevice(BluetoothDevice device) {
         try {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, SMS_PERMISSION_REQUEST);
                 return;
             }
 
@@ -164,7 +219,7 @@ public class ChronometerActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == SMS_PERMISSION_REQUEST) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {

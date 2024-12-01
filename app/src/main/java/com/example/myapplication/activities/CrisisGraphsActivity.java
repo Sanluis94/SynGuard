@@ -96,7 +96,7 @@ public class CrisisGraphsActivity extends AppCompatActivity {
         // Agora estamos utilizando a lista de crises carregada
         for (int i = 0; i < crisisDataList.size(); i++) {
             CrisisData crisis = crisisDataList.get(i);
-            int crisisCount = crisis.getCrisisCount();
+            long crisisCount = crisis.getCrisisCount();
             long averageTime = crisis.getAverageTime();
 
             // Adiciona o número de crises (eixo X)

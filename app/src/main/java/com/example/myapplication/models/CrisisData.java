@@ -7,7 +7,7 @@ import java.util.Locale;
 public class CrisisData {
     private long timestamp;
     private long duration;
-    private int crisisCount;
+    private long crisisCount;
     private long averageTime;
     private long lastCrisisTime;
 
@@ -15,7 +15,7 @@ public class CrisisData {
     public CrisisData() {}
 
     // Construtor completo com todos os parâmetros
-    public CrisisData(long timestamp, long duration, int crisisCount, long averageTime, long lastCrisisTime) {
+    public CrisisData(long timestamp, long duration, long crisisCount, long averageTime, long lastCrisisTime) {
         this.timestamp = timestamp;
         this.duration = duration;
         this.crisisCount = crisisCount;
@@ -49,7 +49,7 @@ public class CrisisData {
         this.duration = duration;
     }
 
-    public int getCrisisCount() {
+    public long getCrisisCount() {
         return crisisCount;
     }
 

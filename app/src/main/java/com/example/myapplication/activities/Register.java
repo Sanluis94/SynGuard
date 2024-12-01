@@ -58,7 +58,7 @@ public class Register extends Activity {
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
 
-        // Ao selecionar o tipo de usuário, exibe o campo de ID do cuidador e telefone do cuidador se for cuidador
+        // Ao selecionar o tipo de usuário, exibe o campo de ID do cuidador ou número de telefone
         userTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.patientRadioButton) {
                 caregiverIdField.setVisibility(View.VISIBLE);
@@ -85,29 +85,30 @@ public class Register extends Activity {
         // Validação de campos obrigatórios
         if (TextUtils.isEmpty(fullName) || TextUtils.isEmpty(email) || TextUtils.isEmpty(password)
                 || TextUtils.isEmpty(confirmPassword)) {
-            Toast.makeText(Register.this, "Preencha todos os campos obrigatórios!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Preencha todos os campos obrigatórios!", Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (!password.equals(confirmPassword)) {
-            Toast.makeText(Register.this, "As senhas não coincidem!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "As senhas não coincidem!", Toast.LENGTH_SHORT).show();
             return;
         }
 
         if ("paciente".equals(userType) && TextUtils.isEmpty(caregiverId)) {
-            Toast.makeText(Register.this, "O ID do cuidador é obrigatório para pacientes!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "O ID do cuidador é obrigatório para pacientes!", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if ("cuidador".equals(userType) && TextUtils.isEmpty(phoneNumber)) {
-            Toast.makeText(Register.this, "O número de telefone é obrigatório para cuidadores!", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if ("cuidador".equals(userType)) {
+            if (TextUtils.isEmpty(phoneNumber)) {
+                Toast.makeText(this, "O número de telefone é obrigatório para cuidadores!", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
-        // Validação do formato do número de telefone apenas para cuidadores
-        if ("cuidador".equals(userType) && !isPhoneNumberValid(phoneNumber)) {
-            Toast.makeText(Register.this, "Número de telefone inválido! O formato correto é (xx) xxxxx-xxxx.", Toast.LENGTH_SHORT).show();
-            return;
+            if (!isPhoneNumberValid(phoneNumber)) {
+                Toast.makeText(this, "Número de telefone inválido! Use o formato internacional: +55XX9XXXXXXX.", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
 
         // Verifica se o caregiverId existe no banco de dados para pacientes
@@ -116,42 +117,7 @@ public class Register extends Activity {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
                     if (dataSnapshot.exists()) {
-                        // Criação do usuário no Firebase
-                        mAuth.createUserWithEmailAndPassword(email, password)
-                                .addOnCompleteListener(Register.this, task -> {
-                                    if (task.isSuccessful()) {
-                                        String userId = mAuth.getCurrentUser().getUid();
-
-                                        // Se for cuidador, gerar o caregiverId aleatório
-                                        if ("cuidador".equals(userType)) {
-                                            String caregiverIdGenerated = generateCaregiverId(); // Gerar ID aleatório para o cuidador
-                                            User newUser = new User(fullName, email, userType, caregiverIdGenerated, phoneNumber);
-                                            mDatabase.child("users").child(userId).setValue(newUser)
-                                                    .addOnCompleteListener(task1 -> {
-                                                        if (task1.isSuccessful()) {
-                                                            Toast.makeText(Register.this, "Cuidador registrado com sucesso!", Toast.LENGTH_LONG).show();
-                                                            navigateToLogin();
-                                                        } else {
-                                                            Toast.makeText(Register.this, "Erro ao salvar os dados do cuidador.", Toast.LENGTH_SHORT).show();
-                                                        }
-                                                    });
-                                        } else {
-                                            // Se for paciente, associar o caregiverId fornecido pelo usuário
-                                            User newUser = new User(fullName, email, userType, caregiverId, phoneNumber);
-                                            mDatabase.child("users").child(userId).setValue(newUser)
-                                                    .addOnCompleteListener(task1 -> {
-                                                        if (task1.isSuccessful()) {
-                                                            Toast.makeText(Register.this, "Paciente registrado com sucesso!", Toast.LENGTH_LONG).show();
-                                                            navigateToLogin();
-                                                        } else {
-                                                            Toast.makeText(Register.this, "Erro ao salvar os dados do paciente.", Toast.LENGTH_SHORT).show();
-                                                        }
-                                                    });
-                                        }
-                                    } else {
-                                        Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                                    }
-                                });
+                        createFirebaseUser(fullName, email, password, userType, caregiverId, phoneNumber);
                     } else {
                         Toast.makeText(Register.this, "O ID do cuidador informado não existe!", Toast.LENGTH_SHORT).show();
                     }
@@ -163,69 +129,67 @@ public class Register extends Activity {
                 }
             });
         } else {
-            // Se for cuidador, cria o usuário sem verificação do caregiverId
-            mAuth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(Register.this, task -> {
-                        if (task.isSuccessful()) {
-                            String userId = mAuth.getCurrentUser().getUid();
-                            String caregiverIdGenerated = generateCaregiverId(); // Gerar ID aleatório para o cuidador
-                            User newUser = new User(fullName, email, userType, caregiverIdGenerated, phoneNumber);
-                            mDatabase.child("users").child(userId).setValue(newUser)
-                                    .addOnCompleteListener(task1 -> {
-                                        if (task1.isSuccessful()) {
-                                            Toast.makeText(Register.this, "Cuidador registrado com sucesso!", Toast.LENGTH_LONG).show();
-                                            navigateToLogin();
-                                        } else {
-                                            Toast.makeText(Register.this, "Erro ao salvar os dados do cuidador.", Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-                        } else {
-                            Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    });
+            // Se for cuidador, cria o usuário diretamente
+            createFirebaseUser(fullName, email, password, userType, null, phoneNumber);
         }
+    }
+
+    private void createFirebaseUser(String fullName, String email, String password, String userType, String caregiverId, String phoneNumber) {
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        String userId = mAuth.getCurrentUser().getUid();
+                        String caregiverIdGenerated = "cuidador".equals(userType) ? generateCaregiverId() : caregiverId;
+
+                        User newUser = new User(fullName, email, userType, caregiverIdGenerated, phoneNumber);
+                        mDatabase.child("users").child(userId).setValue(newUser)
+                                .addOnCompleteListener(task1 -> {
+                                    if (task1.isSuccessful()) {
+                                        Toast.makeText(this, "Registro concluído com sucesso!", Toast.LENGTH_LONG).show();
+                                        navigateToLogin();
+                                    } else {
+                                        Toast.makeText(this, "Erro ao salvar os dados do usuário.", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                    } else {
+                        Toast.makeText(this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
     private String getUserType() {
-        if (patientRadioButton.isChecked()) {
-            return "paciente";
-        } else {
-            return "cuidador";
-        }
+        return patientRadioButton.isChecked() ? "paciente" : "cuidador";
     }
 
     private void navigateToLogin() {
-        Intent intent = new Intent(Register.this, Login.class);
+        Intent intent = new Intent(this, Login.class);
         startActivity(intent);
         finish();
     }
 
-    // Método para gerar o caregiverId com 6 letras e 2 números
+    // Método para gerar o caregiverId com 4 letras e 2 números
     private String generateCaregiverId() {
         Random random = new Random();
         StringBuilder caregiverId = new StringBuilder();
 
-        // Gerar 6 letras aleatórias
-        for (int i = 0; i < 6; i++) {
-            char letter = (char) (random.nextInt(26) + 'A'); // Letras de A a Z
+        for (int i = 0; i < 4; i++) {
+            char letter = (char) (random.nextInt(26) + 'A');
             caregiverId.append(letter);
         }
 
-        // Gerar 2 números aleatórios
         for (int i = 0; i < 2; i++) {
-            int number = random.nextInt(10); // Números de 0 a 9
+            int number = random.nextInt(10);
             caregiverId.append(number);
         }
 
         return caregiverId.toString();
     }
 
-    // Método para validar número de telefone no formato (xx) xxxxx-xxxx
+    // Validação do formato internacional de número de telefone
     private boolean isPhoneNumberValid(String phoneNumber) {
-        String phonePattern = "^\\(\\d{2}\\) \\d{5}-\\d{4}$"; // Regex para validar o número no formato (xx) xxxxx-xxxx
+        String phonePattern = "^\\+55\\d{2}\\d{9}$"; // Padrão: +55XX9XXXXXXX
         Pattern pattern = Pattern.compile(phonePattern);
         Matcher matcher = pattern.matcher(phoneNumber);
         return matcher.matches();
     }
 }
-

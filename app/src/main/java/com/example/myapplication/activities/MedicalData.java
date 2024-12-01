@@ -100,7 +100,7 @@ public class MedicalData extends AppCompatActivity {
 
         // Calculando as somas para total de crises, duração total e tempo médio
         for (CrisisData crisisData : crisisDataList) {
-            totalCrisisCount = crisisData.getCrisisCount();
+            totalCrisisCount = (int) crisisData.getCrisisCount();
             totalDuration = crisisData.getDuration();
             totalAverageTime = crisisData.getAverageTime();
             lastCrisisTime = Math.max(lastCrisisTime, crisisData.getLastCrisisTime()); // Pega o maior (último) tempo de crise

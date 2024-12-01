@@ -25,7 +25,7 @@ public class FirebaseUtils {
         String userId = getCurrentUserId();
         if (userId != null) {
             long timestamp = System.currentTimeMillis();
-            CrisisData crisisData = new CrisisData(caregiverId, timestamp, 1, 0L, 0L);// Atualizar com a duração correta quando o cronômetro parar
+            CrisisData crisisData = new CrisisData(timestamp,0, 0, 0L, 0L);// Atualizar com a duração correta quando o cronômetro parar
 
             DatabaseReference crisisRef = databaseReference.child("patients").child(userId).child("crises");
             String crisisKey = crisisRef.push().getKey();

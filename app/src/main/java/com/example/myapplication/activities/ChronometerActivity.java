@@ -44,6 +44,7 @@ public class ChronometerActivity extends AppCompatActivity {
     private long averageTime = 0;
     private long totalCrisisTime = 0L; // Para calcular a média
     private long lastCrisisTime = 0L;
+    private long timestamp = 0;
 
     // Bluetooth
     private BluetoothAdapter bluetoothAdapter;
@@ -129,7 +130,7 @@ public class ChronometerActivity extends AppCompatActivity {
         averageTime = ((averageTime * (crisisCount - 1)) + duration) / crisisCount;
 
         // Construir os dados
-        CrisisData crisisData = new CrisisData(null, duration, crisisCount, averageTime, lastCrisisTime);
+        CrisisData crisisData = new CrisisData(timestamp, duration, crisisCount, averageTime, lastCrisisTime);
 
         // Salvar no Firebase em "users/{userId}/crisisData/{timestamp}"
         String timestamp = String.valueOf(System.currentTimeMillis());

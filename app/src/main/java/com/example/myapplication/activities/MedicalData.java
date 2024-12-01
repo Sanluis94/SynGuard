@@ -1,8 +1,6 @@
 package com.example.myapplication.activities;
 
-import android.content.Intent;
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -16,66 +14,94 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MedicalData extends AppCompatActivity {
 
-    private TextView tvCrisisCount, tvAverageTime, tvLastCrisisTime;
-    private Button btnBackToMenu;
-    private DatabaseReference crisisDataRef;
+    private TextView crisisCountTextView;
+    private TextView averageTimeTextView;
+    private TextView lastCrisisTimeTextView;  // Adicionando o TextView para a última crise
+    private DatabaseReference databaseReference;
+    private List<CrisisData> crisisDataList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_medical_data);
 
-        // Referências para os elementos da interface
-        tvCrisisCount = findViewById(R.id.tvCrisisCount);
-        tvAverageTime = findViewById(R.id.tvAverageTime);
-        tvLastCrisisTime = findViewById(R.id.tvLastCrisisTime);
-        btnBackToMenu = findViewById(R.id.btnBackToMenu);
+        crisisCountTextView = findViewById(R.id.tvCrisisCount);
+        averageTimeTextView = findViewById(R.id.tvAverageTime);
+        lastCrisisTimeTextView = findViewById(R.id.tvLastCrisisTime);  // Inicializando o TextView da última crise
+        databaseReference = FirebaseDatabase.getInstance().getReference("crisisData");
 
-        // Referência ao Firebase
-        String patientId = "PatientID"; // Substituir pelo ID do paciente real
-        crisisDataRef = FirebaseDatabase.getInstance().getReference("CrisisData").child(patientId);
+        crisisDataList = new ArrayList<>();
 
-        // Recuperar os dados do Firebase
-        loadMedicalData();
-
-        // Botão para voltar ao menu
-        btnBackToMenu.setOnClickListener(v -> {
-            Intent intent = new Intent(MedicalData.this, PatientMenu.class);
-            startActivity(intent);
-            finish();
-        });
+        // Carregar dados das crises
+        loadCrisisData();
     }
 
-    private void loadMedicalData() {
-        crisisDataRef.addValueEventListener(new ValueEventListener() {
+    private void loadCrisisData() {
+        databaseReference.addValueEventListener(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    // Obter os dados de CrisisData do Firebase
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                crisisDataList.clear();  // Limpa a lista de crises
+
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
                     CrisisData crisisData = snapshot.getValue(CrisisData.class);
                     if (crisisData != null) {
-                        tvCrisisCount.setText("Número de crises: " + crisisData.getCrisisCount());
-                        tvAverageTime.setText("Tempo médio das crises: " + formatTime(crisisData.getAverageTime()));
-                        tvLastCrisisTime.setText("Tempo da última crise: " + formatTime(crisisData.getLastCrisisTime()));
+                        crisisDataList.add(crisisData);
                     }
-                } else {
-                    Toast.makeText(MedicalData.this, "Nenhum dado encontrado.", Toast.LENGTH_SHORT).show();
                 }
+
+                // Exibir os dados
+                updateUI();
             }
 
             @Override
-            public void onCancelled(DatabaseError error) {
-                Toast.makeText(MedicalData.this, "Erro ao carregar dados.", Toast.LENGTH_SHORT).show();
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(MedicalData.this, "Erro ao carregar dados", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private String formatTime(long millis) {
-        int seconds = (int) (millis / 1000) % 60;
-        int minutes = (int) ((millis / (1000 * 60)) % 60);
-        int hours = (int) ((millis / (1000 * 60 * 60)) % 24);
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+    private void updateUI() {
+        int totalCrisisCount = 0;
+        long totalDuration = 0;
+        long totalAverageTime = 0;
+        long lastCrisisTime = 0;  // Variável para armazenar o tempo da última crise
+
+        for (CrisisData crisisData : crisisDataList) {
+            totalCrisisCount += crisisData.getCrisisCount();
+            totalDuration += crisisData.getDuration();
+            totalAverageTime += crisisData.getAverageTime();
+
+            // Encontrando o tempo da última crise
+            if (crisisData.getLastCrisisTime() > lastCrisisTime) {
+                lastCrisisTime = crisisData.getLastCrisisTime();
+            }
+        }
+
+        // Atualizando os TextViews
+        crisisCountTextView.setText("Total de Crises: " + totalCrisisCount);
+        if (crisisDataList != null && crisisDataList.size() > 0) {
+            averageTimeTextView.setText("Tempo Médio: " + (totalAverageTime / crisisDataList.size()) + " segundos");
+        }
+        else{
+            averageTimeTextView.setText("Tempo Médio: " + totalAverageTime + " segundos");
+        }
+        // Exibindo o tempo da última crise
+        if (lastCrisisTime > 0) {
+            lastCrisisTimeTextView.setText("Última Crise: " + formatTimestamp(lastCrisisTime));
+        } else {
+            lastCrisisTimeTextView.setText("Última Crise: Nenhuma registrada");
+        }
+    }
+
+    // Método para formatar o timestamp em uma data legível
+    private String formatTimestamp(long timestamp) {
+        java.text.DateFormat dateFormat = android.text.format.DateFormat.getDateFormat(getApplicationContext());
+        java.util.Date date = new java.util.Date(timestamp);
+        return dateFormat.format(date);
     }
 }

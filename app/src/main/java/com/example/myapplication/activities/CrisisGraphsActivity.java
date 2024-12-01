@@ -56,16 +56,22 @@ public class CrisisGraphsActivity extends AppCompatActivity {
                 int index = 0;
 
                 for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-                    String monthYear = dataSnapshot.getKey();
+                    String monthYear = dataSnapshot.getKey();  // Obtém a chave (mês/ano)
                     CrisisData crisisData = dataSnapshot.getValue(CrisisData.class);
 
                     if (crisisData != null) {
+                        // Adicionando entradas para o gráfico de barras (crises por mês)
                         barEntries.add(new BarEntry(index, crisisData.getCrisisCount()));
-                        lineEntries.add(new Entry(index, (float) crisisData.getAverageTime()));
+
+                        // Adicionando entradas para o gráfico de linha (tempo médio das crises)
+                        float averageTimeInMinutes = (float) crisisData.getAverageTime() / 60;  // Convertendo de segundos para minutos
+                        lineEntries.add(new Entry(index, averageTimeInMinutes));
+
                         index++;
                     }
                 }
 
+                // Atualizando os gráficos
                 updateBarChart(barEntries);
                 updateLineChart(lineEntries);
             }
@@ -83,6 +89,7 @@ public class CrisisGraphsActivity extends AppCompatActivity {
         BarData barData = new BarData(barDataSet);
         barChartCrises.setData(barData);
 
+        // Descrição do gráfico de barras
         Description description = new Description();
         description.setText("Número de Crises por Mês");
         barChartCrises.setDescription(description);
@@ -99,6 +106,7 @@ public class CrisisGraphsActivity extends AppCompatActivity {
         LineData lineData = new LineData(lineDataSet);
         lineChartAverageTime.setData(lineData);
 
+        // Descrição do gráfico de linha
         Description description = new Description();
         description.setText("Tempo Médio das Crises por Mês");
         lineChartAverageTime.setDescription(description);

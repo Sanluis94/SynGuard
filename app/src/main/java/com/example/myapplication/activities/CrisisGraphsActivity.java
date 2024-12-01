@@ -16,6 +16,7 @@ import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -39,29 +40,47 @@ public class CrisisGraphsActivity extends AppCompatActivity {
         barChartCrises = findViewById(R.id.barChartCrises);
         lineChartAverageTime = findViewById(R.id.lineChartAverageTime);
 
-        // Firebase reference
-        String patientId = "PatientID"; // Substituir pelo ID do paciente real
-        crisisDataRef = FirebaseDatabase.getInstance().getReference("CrisisData").child(patientId);
+        // Obter ID do paciente logado
+        String patientId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (patientId == null) {
+            Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
+        // Referência ao nó de dados do paciente no Firebase
+        crisisDataRef = FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(patientId)
+                .child("crisisData");
+
+        // Carregar dados para os gráficos
         loadGraphData();
     }
 
     private void loadGraphData() {
-        crisisDataRef.addValueEventListener(new ValueEventListener() {
+        crisisDataRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 List<BarEntry> barEntries = new ArrayList<>();
                 List<Entry> lineEntries = new ArrayList<>();
                 int index = 0;
 
-                for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-                    String monthYear = dataSnapshot.getKey();
-                    Long crisisCount = dataSnapshot.child("crisisCount").getValue(Long.class);
-                    Double averageTime = dataSnapshot.child("averageTime").getValue(Double.class);
+                for (DataSnapshot crisisSnapshot : snapshot.getChildren()) {
+                    Long crisisCount = 0L;
+                    long totalDuration = 0;
 
-                    if (crisisCount != null && averageTime != null) {
+                    for (DataSnapshot data : crisisSnapshot.getChildren()) {
+                        Long duration = data.child("duration").getValue(Long.class);
+                        if (duration != null) {
+                            crisisCount++;
+                            totalDuration += duration;
+                        }
+                    }
+
+                    if (crisisCount > 0) {
+                        float averageTime = totalDuration / (float) crisisCount / 60000; // Convertendo para minutos
                         barEntries.add(new BarEntry(index, crisisCount));
-                        lineEntries.add(new Entry(index, averageTime.floatValue()));
+                        lineEntries.add(new Entry(index, averageTime));
                         index++;
                     }
                 }

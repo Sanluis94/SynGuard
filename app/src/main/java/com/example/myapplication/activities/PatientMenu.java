@@ -43,7 +43,7 @@ public class PatientMenu extends Activity {
         });
 
         btnViewGraphs.setOnClickListener(v -> {
-            Intent intent = new Intent(PatientMenu.this, CrisisDetails.class); // Ou outra atividade responsável pelos gráficos
+            Intent intent = new Intent(PatientMenu.this, CrisisGraphsActivity.class); // Ou outra atividade responsável pelos gráficos
             startActivity(intent);
         });
 

@@ -44,7 +44,7 @@
             android:theme="@style/Theme.AppCompat.Light"/>
         <activity android:name=".models.MedicalData"
             tools:ignore="Instantiatable" />
-        <activity android:name=".activities.CrisisDetails"
+        <activity android:name=".activities.CrisisGraphsActivity"
             android:theme="@style/Theme.AppCompat.Light"/>
         <activity android:name=".activities.Login"
             android:theme="@style/Theme.AppCompat.Light"

@@ -34,7 +34,7 @@ public class BluetoothDevices extends AppCompatActivity {
     private BluetoothDevice bluetoothDevice;
     private Handler handler;
     private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"); // UUID do HC-05
-    private static final String DEVICE_ADDRESS = "00:21:13:01:0A:F4"; // Substitua com o endereço MAC do seu HC-05
+    private static final String DEVICE_ADDRESS = "00:21:13:01:0A:F4"; // Endereço MAC do HC-05 (substitua conforme necessário)
 
     private static final int PERMISSION_REQUEST_CODE = 1; // Código para solicitar permissões
 
@@ -48,7 +48,7 @@ public class BluetoothDevices extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_bluetooth_devices); // Certifique-se de ter o layout correto
+        setContentView(R.layout.activity_bluetooth_devices);
 
         // Inicializando a UI
         statusTextView = findViewById(R.id.statusTextView);
@@ -94,6 +94,16 @@ public class BluetoothDevices extends AppCompatActivity {
         // Register for discovering Bluetooth devices
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(bluetoothReceiver, filter);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
         bluetoothAdapter.startDiscovery();
     }
 
@@ -103,18 +113,44 @@ public class BluetoothDevices extends AppCompatActivity {
             String action = intent.getAction();
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                if (ActivityCompat.checkSelfPermission(BluetoothDevices.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return;
+                }
                 String deviceName = device.getName();
                 String deviceAddress = device.getAddress(); // Endereço MAC
-                devicesList.add(deviceName + "\n" + deviceAddress);
-                devicesAdapter.notifyDataSetChanged();
+
+                // Verificar se o dispositivo encontrado é o HC-05
+                if (deviceName != null && deviceName.equals("HC-05")) {
+                    bluetoothDevice = device;
+                    devicesList.add("Dispositivo encontrado: " + deviceName + "\n" + deviceAddress);
+                    devicesAdapter.notifyDataSetChanged();
+                    progressBar.setVisibility(ProgressBar.INVISIBLE);
+                    statusTextView.setText("Dispositivo encontrado: " + deviceName);
+                    connectToDevice(device); // Conectar ao dispositivo HC-05
+                }
             }
         }
     };
 
-    private void connectToDevice() {
-        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(DEVICE_ADDRESS);
-
+    private void connectToDevice(BluetoothDevice device) {
         try {
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
             bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
             bluetoothSocket.connect();
             statusTextView.setText("Conectado ao dispositivo Bluetooth.");
@@ -128,8 +164,17 @@ public class BluetoothDevices extends AppCompatActivity {
     }
 
     private void startChronometer() {
-        // Você pode iniciar o cronômetro aqui. Utilize a mesma lógica que estava no ChronometerActivity.
-        // Ou você pode passar essa lógica para o BluetoothDevices caso seja necessário iniciar o cronômetro
-        // diretamente a partir dessa activity.
+        // Você pode iniciar o cronômetro aqui.
+        // Aqui, você pode integrar a lógica do cronômetro que foi fornecida anteriormente.
+
+        Toast.makeText(this, "Cronômetro iniciado!", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (bluetoothReceiver != null) {
+            unregisterReceiver(bluetoothReceiver); // Liberar recursos do BroadcastReceiver
+        }
     }
 }

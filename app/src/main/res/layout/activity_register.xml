@@ -61,7 +61,7 @@
         android:id="@+id/phoneNumberInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Número do cuidador"
+        android:hint="Número do cuidador: +55xx9xxxxxxxx"
         android:visibility="gone" />
 
     <Button

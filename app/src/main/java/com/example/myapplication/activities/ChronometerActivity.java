@@ -35,6 +35,7 @@ public class ChronometerActivity extends AppCompatActivity {
     private long totalCrisisTime = 0L;
     private long crisisCount = 0L;
     private long lastCrisisTime = 0L;
+    private long averageTime = 0L;
 
     private DatabaseReference databaseReference;
 
@@ -84,7 +85,7 @@ public class ChronometerActivity extends AppCompatActivity {
         totalCrisisTime += lastCrisisTime;
         crisisCount++;
 
-        long averageTime = totalCrisisTime / crisisCount;
+        averageTime = totalCrisisTime / crisisCount;
 
         saveDataToFirebase(lastCrisisTime, averageTime);
 
@@ -96,7 +97,7 @@ public class ChronometerActivity extends AppCompatActivity {
         Toast.makeText(this, "Cronômetro parado e dados salvos", Toast.LENGTH_SHORT).show();
     }
 
-    private void saveDataToFirebase(long duration, long averageTime) {
+    private void saveDataToFirebase(long lastCrisisTime, long averageTime) {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         if (userId == null) {
             Log.e("ChronometerActivity", "Usuário não autenticado.");
@@ -106,11 +107,11 @@ public class ChronometerActivity extends AppCompatActivity {
 
         Calendar calendar = Calendar.getInstance();
         int year = calendar.get(Calendar.YEAR);
-        int month = calendar.get(Calendar.MONTH) + 1;
+        int month = calendar.get(Calendar.MONTH) + 1; // Incrementa 1 porque o mês começa do 0 (Janeiro)
 
         DatabaseReference crisisRef = databaseReference.child(userId).child("crisisData").child(year + "-" + month).push();
 
-        CrisisData crisisData = new CrisisData(duration, totalCrisisTime, crisisCount, lastCrisisTime, averageTime);
+        CrisisData crisisData = new CrisisData(lastCrisisTime, totalCrisisTime, crisisCount, lastCrisisTime, averageTime);
         crisisRef.setValue(crisisData)
                 .addOnSuccessListener(aVoid -> Log.d("ChronometerActivity", "Dados da crise salvos com sucesso."))
                 .addOnFailureListener(e -> Log.e("ChronometerActivity", "Erro ao salvar dados: " + e.getMessage()));

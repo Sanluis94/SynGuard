@@ -41,6 +41,7 @@ public class ChronometerActivity extends AppCompatActivity {
     private long pauseOffset = 0;
 
     private int crisisCount = 0;
+    private long averageTime = 0;
     private long totalCrisisTime = 0L; // Para calcular a média
     private long lastCrisisTime = 0L;
 
@@ -112,14 +113,42 @@ public class ChronometerActivity extends AppCompatActivity {
         Toast.makeText(this, "Cronômetro parado e resetado", Toast.LENGTH_SHORT).show();
     }
 
-    private void saveDataToFirebase(long averageTime) {
-        String caregiverId = "dummyCaregiverId"; // Substitua pelo ID real
-        CrisisData crisisData = new CrisisData(caregiverId, lastCrisisTime, crisisCount, averageTime, lastCrisisTime);
+    private void saveDataToFirebase(long duration) {
+        // Obter o UID do paciente logado
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        databaseReference.push().setValue(crisisData)
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Dados salvos com sucesso", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Erro ao salvar dados", Toast.LENGTH_SHORT).show());
+        if (userId == null) {
+            Log.e(TAG, "Usuário não autenticado.");
+            Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Atualizar contadores e calcular média
+        crisisCount++;
+        lastCrisisTime = duration;
+        averageTime = ((averageTime * (crisisCount - 1)) + duration) / crisisCount;
+
+        // Construir os dados
+        CrisisData crisisData = new CrisisData(null, duration, crisisCount, averageTime, lastCrisisTime);
+
+        // Salvar no Firebase em "users/{userId}/crisisData/{timestamp}"
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        DatabaseReference userCrisesRef = FirebaseDatabase.getInstance().getReference("users")
+                .child(userId)
+                .child("crisisData")
+                .child(timestamp);
+
+        userCrisesRef.setValue(crisisData)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Dados salvos com sucesso.", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "Dados da crise salvos no Firebase.");
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Erro ao salvar dados.", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Erro ao salvar dados: " + e.getMessage());
+                });
     }
+
 
     private void sendNotificationToCaregiver() {
         // Obter o usuário atual

@@ -31,14 +31,28 @@ public class MedicalDataAdapter extends RecyclerView.Adapter<MedicalDataAdapter.
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         MedicalData medicalData = medicalDataList.get(position);
+
+        // Exibe o mês/ano da crise
         holder.tvMonthYear.setText(medicalData.getMonthYear());
+
+        // Exibe a quantidade de crises no mês
         holder.tvCrisisCount.setText("Crises: " + medicalData.getCrisisCount());
-        holder.tvAverageTime.setText("Média: " + medicalData.getAverageTime() + " mins");
+
+        // Exibe o tempo médio das crises, com formatação adequada
+        // Se for em segundos, convertemos para minutos, se for necessário
+        double averageTimeInMinutes = medicalData.getAverageTime() / 60.0;
+        holder.tvAverageTime.setText(String.format("Média: %.2f mins", averageTimeInMinutes));
     }
 
     @Override
     public int getItemCount() {
         return medicalDataList.size();
+    }
+
+    // Método para atualizar a lista de dados
+    public void updateDataList(ArrayList<MedicalData> newData) {
+        this.medicalDataList = newData;
+        notifyDataSetChanged();
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

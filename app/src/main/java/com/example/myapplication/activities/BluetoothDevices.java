@@ -141,12 +141,29 @@ public class BluetoothDevices extends AppCompatActivity {
                 }
                 bluetoothSocket = bluetoothDevice.createRfcommSocketToServiceRecord(MY_UUID);
                 bluetoothSocket.connect();
-                handler.post(() -> Toast.makeText(BluetoothDevices.this, "Conectado ao HC-05", Toast.LENGTH_SHORT).show());
+                handler.post(() -> {
+                    Toast.makeText(BluetoothDevices.this, "Conectado ao HC-05", Toast.LENGTH_SHORT).show();
+
+                    // Enviar comando para iniciar o cronômetro
+                    sendStartChronometerCommand();
+                });
             } catch (IOException e) {
                 handler.post(() -> Toast.makeText(BluetoothDevices.this, "Falha ao conectar", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
+
+    private void sendStartChronometerCommand() {
+        try {
+            if (bluetoothSocket != null && bluetoothSocket.isConnected()) {
+                // Enviar comando para iniciar o cronômetro, pode ser um simples caractere ou string
+                bluetoothSocket.getOutputStream().write("START_CRONOMETER".getBytes());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     @Override
     protected void onDestroy() {

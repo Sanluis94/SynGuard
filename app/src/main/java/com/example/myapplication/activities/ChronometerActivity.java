@@ -31,6 +31,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Calendar;
 import java.util.UUID;
 
 public class ChronometerActivity extends AppCompatActivity {
@@ -40,7 +41,7 @@ public class ChronometerActivity extends AppCompatActivity {
     private boolean isRunning = false;
     private long pauseOffset = 0;
 
-    private int crisisCount = 0;
+    private static int crisisCount = 0;
     private long totalCrisisTime = 0L; // Para calcular a média
     private long lastCrisisTime = 0L;
 
@@ -64,7 +65,6 @@ public class ChronometerActivity extends AppCompatActivity {
 
         chronometer = findViewById(R.id.chronometer);
         startStopButton = findViewById(R.id.startStopButton);
-        bluetoothButton = findViewById(R.id.bluetoothButton);
 
         databaseReference = FirebaseDatabase.getInstance().getReference("crisisData");
 
@@ -113,32 +113,31 @@ public class ChronometerActivity extends AppCompatActivity {
     }
 
     private void saveDataToFirebase(long duration, long averageTime) {
-        // Obter o UID do paciente logado
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-
         if (userId == null) {
             Log.e(TAG, "Usuário não autenticado.");
             Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Atualizar contadores e calcular média
-        crisisCount++;
-        lastCrisisTime = duration;
-        this.totalCrisisTime = totalCrisisTime + duration;
-        long currentAverage = this.totalCrisisTime / crisisCount;
+        // Calcular o ano e mês da crise
+        Calendar calendar = Calendar.getInstance();
+        int year = calendar.get(Calendar.YEAR);
+        int month = calendar.get(Calendar.MONTH) + 1; // Janeiro é 0, então adicionamos 1
+        String crisisId = String.valueOf(crisisCount);
 
-        // Construir os dados
-        CrisisData crisisData = new CrisisData(System.currentTimeMillis(), duration, crisisCount, currentAverage, lastCrisisTime);
+        // Criar o objeto de dados
+        CrisisData crisisData = new CrisisData(crisisCount, duration, crisisCount, averageTime, duration);
 
-        // Salvar no Firebase em "users/{userId}/crisisData/{timestamp}"
-        String timestamp = String.valueOf(System.currentTimeMillis());
-        DatabaseReference userCrisesRef = FirebaseDatabase.getInstance().getReference("users")
+        // Salvar no Firebase
+        DatabaseReference crisisRef = FirebaseDatabase.getInstance().getReference("users")
                 .child(userId)
                 .child("crisisData")
-                .child(timestamp); // Salva com timestamp único
+                .child(String.valueOf(year))
+                .child(String.valueOf(month))
+                .child(crisisId);
 
-        userCrisesRef.setValue(crisisData)
+        crisisRef.setValue(crisisData)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, "Dados salvos com sucesso.", Toast.LENGTH_SHORT).show();
                     Log.d(TAG, "Dados da crise salvos no Firebase.");
@@ -237,13 +236,15 @@ public class ChronometerActivity extends AppCompatActivity {
                         }
                     }
                 } catch (IOException e) {
-                    Log.e(TAG, "Erro de comunicação Bluetooth: " + e.getMessage());
+                    Log.e(TAG, "Erro de leitura Bluetooth: " + e.getMessage());
+                    bluetoothConnected = false;
+                    Toast.makeText(this, "Erro na conexão Bluetooth", Toast.LENGTH_SHORT).show();
                 }
             }).start();
-
         } catch (IOException e) {
-            Log.e(TAG, "Erro ao conectar Bluetooth: " + e.getMessage());
-            Toast.makeText(this, "Erro ao conectar Bluetooth", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Erro ao conectar ao Bluetooth: " + e.getMessage());
+            Toast.makeText(this, "Erro ao conectar ao Bluetooth", Toast.LENGTH_SHORT).show();
         }
     }
+
 }

@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
 import com.example.myapplication.models.CrisisData;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -42,49 +43,33 @@ public class MedicalData extends AppCompatActivity {
     }
 
     private void loadCrisisData() {
-        // Substitua os IDs abaixo com os IDs do cuidador e do paciente
-        String caregiverId = "caregiverId123"; // ID do cuidador
-        String patientId = "patientId456"; // ID do paciente
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+        String userEmail = mAuth.getCurrentUser().getEmail();
 
-        // Referência Firebase para dados de crises
-        databaseReference.child(caregiverId) // Acesso ao cuidador
-                .child("patients") // Acesso aos pacientes associados
-                .child(patientId) // Acesso ao paciente específico
-                .child("crisisData")
-                .orderByKey()
-                .limitToLast(1) // Limitando para pegar apenas os dados mais recentes
-                .addValueEventListener(new ValueEventListener() {
+        if (userEmail == null) {
+            Toast.makeText(MedicalData.this, "Usuário não autenticado", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Referência Firebase para acessar os dados de usuários
+        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
+
+        // Realiza uma consulta para encontrar o usuário com o e-mail atual
+        usersRef.orderByChild("email").equalTo(userEmail)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
-                        crisisDataList.clear();
+                        if (dataSnapshot.exists()) {
+                            for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                                String caregiverId = snapshot.child("caregiverId").getValue(String.class);
+                                String patientId = snapshot.getKey(); // O ID do paciente é a chave do nó
 
-                        // Itera sobre as entradas de "crisisData"
-                        for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                            // Pega os valores dos campos de cada "crisisData"
-                            Long timestamp = snapshot.child("timestamp").getValue(Long.class);
-                            Long duration = snapshot.child("duration").getValue(Long.class);
-                            Integer crisisCount = snapshot.child("crisisCount").getValue(Integer.class);
-                            Long averageTime = snapshot.child("averageTime").getValue(Long.class);
-                            Long lastCrisisTime = snapshot.child("lastCrisisTime").getValue(Long.class);
-
-                            // Verifique se os dados estão sendo obtidos corretamente
-                            if (timestamp != null && duration != null && crisisCount != null && averageTime != null && lastCrisisTime != null) {
-                                // Verifique se crisisCount é maior que 0 antes de fazer qualquer divisão
-                                if (crisisCount > 0) {
-                                    // Realize o cálculo do averageTime se o número de crises for maior que zero
-                                    averageTime = duration / crisisCount;
-                                } else {
-                                    // Se crisisCount for zero, defina uma média padrão (ou 0)
-                                    averageTime = 0L;
-                                }
-
-                                CrisisData crisisData = new CrisisData(timestamp, duration, crisisCount, averageTime, lastCrisisTime);
-                                crisisDataList.add(crisisData);
+                                // Acessando dados de crises para o paciente
+                                loadPatientCrisisData(caregiverId, patientId);
                             }
+                        } else {
+                            Toast.makeText(MedicalData.this, "Usuário não encontrado", Toast.LENGTH_SHORT).show();
                         }
-
-                        // Atualize a UI
-                        updateUI();
                     }
 
                     @Override
@@ -94,6 +79,64 @@ public class MedicalData extends AppCompatActivity {
                 });
     }
 
+    private void loadPatientCrisisData(String caregiverId, String patientId) {
+        if (caregiverId == null || patientId == null) {
+            Toast.makeText(MedicalData.this, "Dados de paciente ou cuidador não encontrados", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Referência Firebase para acessar dados de crises do paciente
+        DatabaseReference crisisDataRef = FirebaseDatabase.getInstance().getReference("users")
+                .child(caregiverId) // Acesso ao cuidador
+                .child("patients") // Acesso aos pacientes associados
+                .child(patientId) // Acesso ao paciente específico
+                .child("crisisData"); // Dados das crises
+
+        // Carregar os dados de crises ordenados pela data (timestamp)
+        crisisDataRef.orderByChild("timestamp") // Ordena pela data da crise (timestamp)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+                        crisisDataList.clear();
+
+                        // Verifica se o snapshot existe
+                        if (dataSnapshot.exists()) {
+                            for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                                Long timestamp = snapshot.child("timestamp").getValue(Long.class);
+                                Long duration = snapshot.child("duration").getValue(Long.class);
+                                Integer crisisCount = snapshot.child("crisisCount").getValue(Integer.class);
+                                Long averageTime = snapshot.child("averageTime").getValue(Long.class);
+                                Long lastCrisisTime = snapshot.child("lastCrisisTime").getValue(Long.class);
+
+                                // Verifique se os dados estão sendo obtidos corretamente
+                                if (timestamp != null && duration != null && crisisCount != null && averageTime != null && lastCrisisTime != null) {
+                                    // Verifique se crisisCount é maior que 0 antes de fazer qualquer divisão
+                                    if (crisisCount > 0) {
+                                        // Calcule o averageTime com base no número de crises
+                                        averageTime = duration / crisisCount;
+                                    } else {
+                                        // Se crisisCount for zero, defina uma média padrão (ou 0)
+                                        averageTime = 0L;
+                                    }
+
+                                    CrisisData crisisData = new CrisisData(timestamp, duration, crisisCount, averageTime, lastCrisisTime);
+                                    crisisDataList.add(crisisData);
+                                }
+                            }
+
+                            // Atualize a UI com os dados mais recentes
+                            updateUI();
+                        } else {
+                            Toast.makeText(MedicalData.this, "Sem dados de crise para este paciente", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                        Toast.makeText(MedicalData.this, "Erro ao carregar dados de crises", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
 
     private void updateUI() {
         int totalCrisisCount = 0;

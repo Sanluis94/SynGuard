@@ -19,11 +19,4 @@
         android:layout_height="wrap_content"
         android:text="Start" />
 
-    <Button
-        android:id="@+id/bluetoothButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Conectar Bluetooth"
-        android:layout_marginTop="16dp" />
-
 </LinearLayout>

@@ -55,7 +55,7 @@ public class CrisisGraphsActivity extends AppCompatActivity {
     }
 
     private void loadGraphData() {
-        crisisDataRef.orderByKey().limitToLast(1) // Pega o último dado de crise com base no timestamp
+        crisisDataRef.orderByChild("timestamp") // Ordena pela data (timestamp)
                 .addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -64,7 +64,6 @@ public class CrisisGraphsActivity extends AppCompatActivity {
                         int index = 0;
 
                         for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-                            String monthYear = dataSnapshot.getKey();  // Obtém a chave (timestamp)
                             CrisisData crisisData = dataSnapshot.getValue(CrisisData.class);
 
                             if (crisisData != null) {

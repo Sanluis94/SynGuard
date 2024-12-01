@@ -40,47 +40,55 @@ public class CrisisGraphsActivity extends AppCompatActivity {
         barChartCrises = findViewById(R.id.barChartCrises);
         lineChartAverageTime = findViewById(R.id.lineChartAverageTime);
 
+        // Obtenção do ID do paciente e do cuidador
+        String caregiverId = "caregiverId123"; // ID do cuidador, pode ser obtido a partir do login
+        String patientId = "patientId456"; // ID do paciente, pode ser obtido a partir do login
+
         // Firebase reference
-        String patientId = "PatientID"; // Substituir pelo ID do paciente real
-        crisisDataRef = FirebaseDatabase.getInstance().getReference("CrisisData").child(patientId);
+        crisisDataRef = FirebaseDatabase.getInstance().getReference("users")
+                .child(caregiverId) // ID do cuidador
+                .child("patients")
+                .child(patientId) // ID do paciente
+                .child("crisisData");
 
         loadGraphData();
     }
 
     private void loadGraphData() {
-        crisisDataRef.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                List<BarEntry> barEntries = new ArrayList<>();
-                List<Entry> lineEntries = new ArrayList<>();
-                int index = 0;
+        crisisDataRef.orderByKey().limitToLast(1) // Pega o último dado de crise com base no timestamp
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        List<BarEntry> barEntries = new ArrayList<>();
+                        List<Entry> lineEntries = new ArrayList<>();
+                        int index = 0;
 
-                for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
-                    String monthYear = dataSnapshot.getKey();  // Obtém a chave (mês/ano)
-                    CrisisData crisisData = dataSnapshot.getValue(CrisisData.class);
+                        for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                            String monthYear = dataSnapshot.getKey();  // Obtém a chave (timestamp)
+                            CrisisData crisisData = dataSnapshot.getValue(CrisisData.class);
 
-                    if (crisisData != null) {
-                        // Adicionando entradas para o gráfico de barras (crises por mês)
-                        barEntries.add(new BarEntry(index, crisisData.getCrisisCount()));
+                            if (crisisData != null) {
+                                // Adicionando entradas para o gráfico de barras (crises por mês)
+                                barEntries.add(new BarEntry(index, crisisData.getCrisisCount()));
 
-                        // Adicionando entradas para o gráfico de linha (tempo médio das crises)
-                        float averageTimeInMinutes = (float) crisisData.getAverageTime() / 60;  // Convertendo de segundos para minutos
-                        lineEntries.add(new Entry(index, averageTimeInMinutes));
+                                // Adicionando entradas para o gráfico de linha (tempo médio das crises)
+                                float averageTimeInMinutes = (float) crisisData.getAverageTime() / 60;  // Convertendo de segundos para minutos
+                                lineEntries.add(new Entry(index, averageTimeInMinutes));
 
-                        index++;
+                                index++;
+                            }
+                        }
+
+                        // Atualizando os gráficos
+                        updateBarChart(barEntries);
+                        updateLineChart(lineEntries);
                     }
-                }
 
-                // Atualizando os gráficos
-                updateBarChart(barEntries);
-                updateLineChart(lineEntries);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar dados.", Toast.LENGTH_SHORT).show();
-            }
-        });
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar dados.", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void updateBarChart(List<BarEntry> barEntries) {
@@ -89,28 +97,25 @@ public class CrisisGraphsActivity extends AppCompatActivity {
         BarData barData = new BarData(barDataSet);
         barChartCrises.setData(barData);
 
-        // Descrição do gráfico de barras
         Description description = new Description();
         description.setText("Número de Crises por Mês");
         barChartCrises.setDescription(description);
 
-        barChartCrises.invalidate(); // Atualiza o gráfico
+        barChartCrises.invalidate();
     }
 
     private void updateLineChart(List<Entry> lineEntries) {
         LineDataSet lineDataSet = new LineDataSet(lineEntries, "Tempo Médio (minutos)");
         lineDataSet.setColor(getResources().getColor(R.color.teal_200));
         lineDataSet.setCircleColor(getResources().getColor(R.color.teal_200));
-        lineDataSet.setLineWidth(2f);
 
         LineData lineData = new LineData(lineDataSet);
         lineChartAverageTime.setData(lineData);
 
-        // Descrição do gráfico de linha
         Description description = new Description();
-        description.setText("Tempo Médio das Crises por Mês");
+        description.setText("Tempo Médio das Crises");
         lineChartAverageTime.setDescription(description);
 
-        lineChartAverageTime.invalidate(); // Atualiza o gráfico
+        lineChartAverageTime.invalidate();
     }
 }

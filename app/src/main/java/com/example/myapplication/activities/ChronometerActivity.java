@@ -41,10 +41,8 @@ public class ChronometerActivity extends AppCompatActivity {
     private long pauseOffset = 0;
 
     private int crisisCount = 0;
-    private long averageTime = 0;
     private long totalCrisisTime = 0L; // Para calcular a média
     private long lastCrisisTime = 0L;
-    private long timestamp = 0;
 
     // Bluetooth
     private BluetoothAdapter bluetoothAdapter;
@@ -78,7 +76,7 @@ public class ChronometerActivity extends AppCompatActivity {
         if (!isRunning) {
             startChronometer();
         } else {
-            stopAndResetChronometer();
+            stopAndSaveData();
         }
     }
 
@@ -92,7 +90,7 @@ public class ChronometerActivity extends AppCompatActivity {
         Toast.makeText(this, "Cronômetro iniciado", Toast.LENGTH_SHORT).show();
     }
 
-    private void stopAndResetChronometer() {
+    private void stopAndSaveData() {
         chronometer.stop();
         long duration = SystemClock.elapsedRealtime() - chronometer.getBase();
         isRunning = false;
@@ -104,17 +102,17 @@ public class ChronometerActivity extends AppCompatActivity {
         long averageTime = totalCrisisTime / crisisCount;
 
         // Salva os dados no Firebase
-        saveDataToFirebase(averageTime);
+        saveDataToFirebase(lastCrisisTime, averageTime);
 
         // Reseta o cronômetro
         chronometer.setBase(SystemClock.elapsedRealtime());
         pauseOffset = 0;
         startStopButton.setText("Start");
 
-        Toast.makeText(this, "Cronômetro parado e resetado", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Cronômetro parado e dados salvos", Toast.LENGTH_SHORT).show();
     }
 
-    private void saveDataToFirebase(long duration) {
+    private void saveDataToFirebase(long duration, long averageTime) {
         // Obter o UID do paciente logado
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
@@ -127,17 +125,18 @@ public class ChronometerActivity extends AppCompatActivity {
         // Atualizar contadores e calcular média
         crisisCount++;
         lastCrisisTime = duration;
-        averageTime = ((averageTime * (crisisCount - 1)) + duration) / crisisCount;
+        this.totalCrisisTime = totalCrisisTime + duration;
+        long currentAverage = this.totalCrisisTime / crisisCount;
 
         // Construir os dados
-        CrisisData crisisData = new CrisisData(timestamp, duration, crisisCount, averageTime, lastCrisisTime);
+        CrisisData crisisData = new CrisisData(System.currentTimeMillis(), duration, crisisCount, currentAverage, lastCrisisTime);
 
         // Salvar no Firebase em "users/{userId}/crisisData/{timestamp}"
         String timestamp = String.valueOf(System.currentTimeMillis());
         DatabaseReference userCrisesRef = FirebaseDatabase.getInstance().getReference("users")
                 .child(userId)
                 .child("crisisData")
-                .child(timestamp);
+                .child(timestamp); // Salva com timestamp único
 
         userCrisesRef.setValue(crisisData)
                 .addOnSuccessListener(aVoid -> {
@@ -149,7 +148,6 @@ public class ChronometerActivity extends AppCompatActivity {
                     Log.e(TAG, "Erro ao salvar dados: " + e.getMessage());
                 });
     }
-
 
     private void sendNotificationToCaregiver() {
         // Obter o usuário atual
@@ -199,7 +197,6 @@ public class ChronometerActivity extends AppCompatActivity {
         }
     }
 
-
     private void connectBluetooth() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
@@ -226,21 +223,26 @@ public class ChronometerActivity extends AppCompatActivity {
 
             Toast.makeText(this, "Conexão Bluetooth estabelecida", Toast.LENGTH_SHORT).show();
 
-            handler.post(() -> {
+            // Loop de leitura Bluetooth
+            new Thread(() -> {
                 try {
-                    if (inputStream.available() > 0) {
-                        int data = inputStream.read();
-                        if (data == '1') { // Pressionado
-                            toggleChronometer();
+                    while (bluetoothConnected) {
+                        int bytesAvailable = inputStream.available();
+                        if (bytesAvailable > 0) {
+                            byte[] buffer = new byte[bytesAvailable];
+                            inputStream.read(buffer);
+                            String receivedData = new String(buffer, 0, bytesAvailable);
+                            // Processa dados recebidos aqui (ex: inicia cronômetro)
+                            Log.d(TAG, "Dados recebidos: " + receivedData);
                         }
                     }
                 } catch (IOException e) {
-                    Log.e(TAG, "Erro ao ler Bluetooth", e);
+                    Log.e(TAG, "Erro de comunicação Bluetooth: " + e.getMessage());
                 }
-            });
+            }).start();
 
         } catch (IOException e) {
-            Log.e(TAG, "Erro ao conectar Bluetooth", e);
+            Log.e(TAG, "Erro ao conectar Bluetooth: " + e.getMessage());
             Toast.makeText(this, "Erro ao conectar Bluetooth", Toast.LENGTH_SHORT).show();
         }
     }

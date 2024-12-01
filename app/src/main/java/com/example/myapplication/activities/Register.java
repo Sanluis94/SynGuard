@@ -110,10 +110,13 @@ public class Register extends Activity {
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         String userId = mAuth.getCurrentUser().getUid();
-                        User newUser = new User(fullName, email, userType,
-                                "cuidador".equals(userType) ? generateCaregiverId() : caregiverId,
-                                phoneNumber);
 
+                        // Definindo caregiverId para pacientes ou cuidadores
+                        String finalCaregiverId = "cuidador".equals(userType) ? userId : caregiverId;
+
+                        User newUser = new User(fullName, email, userType, finalCaregiverId, phoneNumber);
+
+                        // Salvar o usuário no banco de dados Firebase
                         mDatabase.child("users").child(userId).setValue(newUser)
                                 .addOnCompleteListener(task1 -> {
                                     if (task1.isSuccessful()) {
@@ -127,20 +130,6 @@ public class Register extends Activity {
                         Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });
-    }
-
-    private String generateCaregiverId() {
-        Random random = new Random();
-        StringBuilder caregiverId = new StringBuilder();
-
-        // Gerar 4 letras aleatórias
-        for (int i = 0; i < 4; i++) {
-            caregiverId.append((char) ('A' + random.nextInt(26)));
-        }
-
-        // Gerar 2 números aleatórios
-        caregiverId.append(random.nextInt(10)).append(random.nextInt(10));
-        return caregiverId.toString();
     }
 
     private String getUserType() {

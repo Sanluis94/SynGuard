@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -21,7 +22,7 @@ import java.util.Random;
 
 public class Register extends Activity {
 
-    private EditText fullNameField, emailField, passwordField, confirmPasswordField, caregiverIdField,phoneNumberField;
+    private EditText fullNameField, emailField, passwordField, confirmPasswordField, caregiverIdField, phoneNumberField;
     private Button registerButton;
     private RadioGroup userTypeGroup;
     private RadioButton patientRadioButton, caregiverRadioButton;
@@ -52,12 +53,14 @@ public class Register extends Activity {
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
 
-        // Ao selecionar o tipo de usuário, exibe o campo de ID do cuidador se for paciente
+        // Listener para o RadioGroup para controlar a visibilidade dos campos adicionais
         userTypeGroup.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.patientRadioButton) {
                 caregiverIdField.setVisibility(View.VISIBLE);
-            } else {
+                phoneNumberField.setVisibility(View.GONE); // Esconde o campo de telefone para pacientes
+            } else if (checkedId == R.id.caregiverRadioButton) {
                 caregiverIdField.setVisibility(View.GONE);
+                phoneNumberField.setVisibility(View.VISIBLE); // Mostra o campo de telefone para cuidadores
             }
         });
 
@@ -91,48 +94,39 @@ public class Register extends Activity {
             return;
         }
 
-        // Criação do usuário no Firebase
         if ("cuidador".equals(userType)) {
-            String caregiverUniqueId = generateCaregiverId(); // Gera um ID único para cuidadores
-            mAuth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this, task -> {
-                        if (task.isSuccessful()) {
-                            String userId = mAuth.getCurrentUser().getUid();
-                            User newUser = new User(fullName, email, userType, caregiverUniqueId, phoneNumber);
-
-                            mDatabase.child("users").child(userId).setValue(newUser)
-                                    .addOnCompleteListener(task1 -> {
-                                        if (task1.isSuccessful()) {
-                                            Toast.makeText(Register.this, "Usuário registrado com sucesso!", Toast.LENGTH_LONG).show();
-                                            navigateToLogin();
-                                        } else {
-                                            Toast.makeText(Register.this, "Erro ao salvar os dados do cuidador.", Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-                        } else {
-                            Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    });
-        } else {
-            mAuth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener(this, task -> {
-                        if (task.isSuccessful()) {
-                            String userId = mAuth.getCurrentUser().getUid();
-                            User newUser = new User(fullName, email, userType, caregiverId, phoneNumber);
-                            mDatabase.child("users").child(userId).setValue(newUser)
-                                    .addOnCompleteListener(task1 -> {
-                                        if (task1.isSuccessful()) {
-                                            Toast.makeText(Register.this, "Paciente registrado com sucesso!", Toast.LENGTH_LONG).show();
-                                            navigateToLogin();
-                                        } else {
-                                            Toast.makeText(Register.this, "Erro ao salvar os dados do paciente.", Toast.LENGTH_SHORT).show();
-                                        }
-                                    });
-                        } else {
-                            Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
-                        }
-                    });
+            if (TextUtils.isEmpty(phoneNumber)) {
+                Toast.makeText(Register.this, "O número de telefone é obrigatório para cuidadores!", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!Patterns.PHONE.matcher(phoneNumber).matches()) {
+                Toast.makeText(Register.this, "Digite um número de telefone válido!", Toast.LENGTH_SHORT).show();
+                return;
+            }
         }
+
+        // Criação do usuário no Firebase
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        String userId = mAuth.getCurrentUser().getUid();
+                        User newUser = new User(fullName, email, userType,
+                                "cuidador".equals(userType) ? generateCaregiverId() : caregiverId,
+                                phoneNumber);
+
+                        mDatabase.child("users").child(userId).setValue(newUser)
+                                .addOnCompleteListener(task1 -> {
+                                    if (task1.isSuccessful()) {
+                                        Toast.makeText(Register.this, "Usuário registrado com sucesso!", Toast.LENGTH_LONG).show();
+                                        navigateToLogin();
+                                    } else {
+                                        Toast.makeText(Register.this, "Erro ao salvar os dados do usuário.", Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                    } else {
+                        Toast.makeText(Register.this, "Falha na criação do usuário: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
     private String generateCaregiverId() {

@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
+import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -22,6 +23,8 @@ import androidx.core.app.NotificationCompat;
 
 import com.example.myapplication.R;
 import com.example.myapplication.models.CrisisData;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -37,9 +40,9 @@ public class ChronometerActivity extends AppCompatActivity {
     private boolean isRunning = false;
     private long pauseOffset = 0;
 
-    int crisisCount = 0;       // Exemplo inicial
-    long averageTime = 0L;     // Média inicial
-    long lastCrisisTime = 0L;  // Última crise inicial
+    private int crisisCount = 0;
+    private long totalCrisisTime = 0L; // Para calcular a média
+    private long lastCrisisTime = 0L;
 
     // Bluetooth
     private BluetoothAdapter bluetoothAdapter;
@@ -66,7 +69,6 @@ public class ChronometerActivity extends AppCompatActivity {
         databaseReference = FirebaseDatabase.getInstance().getReference("crisisData");
 
         startStopButton.setOnClickListener(view -> toggleChronometer());
-
         bluetoothButton.setOnClickListener(view -> connectBluetooth());
     }
 
@@ -74,42 +76,45 @@ public class ChronometerActivity extends AppCompatActivity {
         if (!isRunning) {
             startChronometer();
         } else {
-            stopChronometer();
+            stopAndResetChronometer();
         }
     }
 
     private void startChronometer() {
-        chronometer.setBase(SystemClock.elapsedRealtime() - pauseOffset);
+        chronometer.setBase(SystemClock.elapsedRealtime());
         chronometer.start();
         isRunning = true;
         startStopButton.setText("Stop");
 
-        // Save initial data and send notification
         sendNotificationToCaregiver();
         Toast.makeText(this, "Cronômetro iniciado", Toast.LENGTH_SHORT).show();
     }
 
-    private void stopChronometer() {
+    private void stopAndResetChronometer() {
         chronometer.stop();
-        pauseOffset = SystemClock.elapsedRealtime() - chronometer.getBase();
+        long duration = SystemClock.elapsedRealtime() - chronometer.getBase();
         isRunning = false;
-        startStopButton.setText("Reset");
 
-        // Save data to Firebase
-        long duration = pauseOffset / 1000;
-        saveDataToFirebase(duration);
-    }
+        // Atualiza os dados de crise
+        lastCrisisTime = duration / 1000; // Convertendo para segundos
+        totalCrisisTime += lastCrisisTime;
+        crisisCount++;
+        long averageTime = totalCrisisTime / crisisCount;
 
-    private void resetChronometer() {
+        // Salva os dados no Firebase
+        saveDataToFirebase(averageTime);
+
+        // Reseta o cronômetro
         chronometer.setBase(SystemClock.elapsedRealtime());
         pauseOffset = 0;
         startStopButton.setText("Start");
+
+        Toast.makeText(this, "Cronômetro parado e resetado", Toast.LENGTH_SHORT).show();
     }
 
-    private void saveDataToFirebase(long duration) {
+    private void saveDataToFirebase(long averageTime) {
         String caregiverId = "dummyCaregiverId"; // Substitua pelo ID real
-        // Construtor esperado
-        CrisisData crisisData = new CrisisData(caregiverId, duration, crisisCount, averageTime, lastCrisisTime);
+        CrisisData crisisData = new CrisisData(caregiverId, lastCrisisTime, crisisCount, averageTime, lastCrisisTime);
 
         databaseReference.push().setValue(crisisData)
                 .addOnSuccessListener(aVoid -> Toast.makeText(this, "Dados salvos com sucesso", Toast.LENGTH_SHORT).show())
@@ -117,23 +122,53 @@ public class ChronometerActivity extends AppCompatActivity {
     }
 
     private void sendNotificationToCaregiver() {
-        String channelId = "CaregiverNotification";
-        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        // Obter o usuário atual
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(channelId, "Caregiver Notifications",
-                    NotificationManager.IMPORTANCE_HIGH);
-            notificationManager.createNotificationChannel(channel);
-        }
+        // Consultar o nó "users" para obter o caregiverId do paciente
+        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("users");
+        usersRef.child(userId).get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                String caregiverId = task.getResult().child("caregiverId").getValue(String.class);
 
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Cronômetro iniciado")
-                .setContentText("O cronômetro foi iniciado pelo paciente.")
-                .setPriority(NotificationCompat.PRIORITY_HIGH);
+                // Buscar o cuidador correspondente no nó "users"
+                usersRef.orderByChild("caregiverId").equalTo(caregiverId).get().addOnCompleteListener(caregiverTask -> {
+                    if (caregiverTask.isSuccessful() && caregiverTask.getResult() != null) {
+                        for (DataSnapshot snapshot : caregiverTask.getResult().getChildren()) {
+                            String role = snapshot.child("role").getValue(String.class);
+                            if ("cuidador".equals(role)) {
+                                String phoneNumber = snapshot.child("phone").getValue(String.class);
 
-        notificationManager.notify(1, builder.build());
+                                if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                                    sendSmsToCaregiver(phoneNumber);
+                                } else {
+                                    Log.e(TAG, "Número de telefone do cuidador não está disponível.");
+                                }
+                                break;
+                            }
+                        }
+                    } else {
+                        Log.e(TAG, "Erro ao buscar cuidador: " + caregiverTask.getException());
+                    }
+                });
+            } else {
+                Log.e(TAG, "Erro ao buscar paciente: " + task.getException());
+            }
+        });
     }
+
+    private void sendSmsToCaregiver(String phoneNumber) {
+        try {
+            String message = "O cronômetro foi iniciado pelo paciente!";
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+            Toast.makeText(this, "SMS enviado ao cuidador", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Log.e(TAG, "Erro ao enviar SMS: " + e.getMessage());
+            Toast.makeText(this, "Falha ao enviar SMS", Toast.LENGTH_SHORT).show();
+        }
+    }
+
 
     private void connectBluetooth() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -147,17 +182,9 @@ public class ChronometerActivity extends AppCompatActivity {
             return;
         }
 
-        // Iniciar conexão Bluetooth com o dispositivo HC-05
         try {
-            BluetoothDevice device = bluetoothAdapter.getRemoteDevice("00:00:00:00:00:00"); // Insira o endereço do HC-05
+            BluetoothDevice device = bluetoothAdapter.getRemoteDevice("00:00:00:00:00:00"); // Substitua pelo endereço do HC-05
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
             bluetoothSocket = device.createRfcommSocketToServiceRecord(MODULE_UUID);
@@ -169,7 +196,6 @@ public class ChronometerActivity extends AppCompatActivity {
 
             Toast.makeText(this, "Conexão Bluetooth estabelecida", Toast.LENGTH_SHORT).show();
 
-            // Listener para receber dados do HC-05
             handler.post(() -> {
                 try {
                     if (inputStream.available() > 0) {

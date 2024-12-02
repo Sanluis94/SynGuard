@@ -27,6 +27,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Calendar;
 import java.util.UUID;
 
@@ -60,7 +61,6 @@ public class ChronometerActivity extends AppCompatActivity {
 
         if (bluetoothDevice != null) {
             connectToBluetoothDevice(bluetoothDevice);
-            startChronometer();  // Inicia o cronômetro automaticamente após a conexão Bluetooth
         }
 
         databaseReference = FirebaseDatabase.getInstance().getReference("users");
@@ -91,8 +91,6 @@ public class ChronometerActivity extends AppCompatActivity {
             startChronometer();
         }
     }
-
-
 
     private void stopAndSaveData() {
         chronometer.stop();
@@ -208,29 +206,27 @@ public class ChronometerActivity extends AppCompatActivity {
                                             databaseReference.child(otherUserId).child("phone").addListenerForSingleValueEvent(new ValueEventListener() {
                                                 @Override
                                                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                                                    String phoneNumber = dataSnapshot.getValue(String.class);
-                                                    if (phoneNumber != null && !phoneNumber.isEmpty()) {
-                                                        Log.d("ChronometerActivity", "Número de telefone do cuidador encontrado: " + phoneNumber);
-
-                                                        if (phoneNumber.startsWith("+")) {
+                                                    if (dataSnapshot.exists()) {
+                                                        String phoneNumber = dataSnapshot.getValue(String.class);
+                                                        if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                                                            SmsManager smsManager = SmsManager.getDefault();
                                                             try {
-                                                                SmsManager smsManager = SmsManager.getDefault();
                                                                 smsManager.sendTextMessage(phoneNumber, null, message, null, null);
-                                                                Log.d("ChronometerActivity", "Mensagem SMS enviada com sucesso.");
+                                                                Log.d("ChronometerActivity", "Mensagem SMS enviada para o cuidador.");
                                                             } catch (Exception e) {
                                                                 Log.e("ChronometerActivity", "Erro ao enviar SMS: " + e.getMessage());
                                                             }
                                                         } else {
-                                                            Log.e("ChronometerActivity", "Número de telefone inválido.");
+                                                            Log.e("ChronometerActivity", "Número de telefone do cuidador não encontrado ou inválido.");
                                                         }
                                                     } else {
-                                                        Log.e("ChronometerActivity", "Telefone não encontrado ou inválido.");
+                                                        Log.e("ChronometerActivity", "Telefone do cuidador não encontrado no banco de dados.");
                                                     }
                                                 }
 
                                                 @Override
                                                 public void onCancelled(@NonNull DatabaseError error) {
-                                                    Log.e("ChronometerActivity", "Erro ao recuperar o telefone: " + error.getMessage());
+                                                    Log.e("ChronometerActivity", "Erro ao enviar SMS: " + error.getMessage());
                                                 }
                                             });
                                         }
@@ -244,40 +240,64 @@ public class ChronometerActivity extends AppCompatActivity {
                     } else {
                         Log.e("ChronometerActivity", "Caregiver ID inválido.");
                     }
+                } else {
+                    Log.e("ChronometerActivity", "Caregiver ID não encontrado no banco de dados.");
                 }
             }
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Log.e("ChronometerActivity", "Erro ao recuperar caregiverId: " + error.getMessage());
+                Log.e("ChronometerActivity", "Erro ao buscar caregiverId: " + error.getMessage());
             }
         });
     }
 
     private void connectToBluetoothDevice(BluetoothDevice device) {
+        // Tentativa de conexão com o dispositivo Bluetooth
         try {
-            // Configuração do UUID padrão para o Bluetooth
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
+                Log.e("ChronometerActivity", "Permissão de Bluetooth não concedida.");
                 return;
             }
-            UUID uuid = device.getUuids()[0].getUuid();
-            bluetoothSocket = device.createRfcommSocketToServiceRecord(uuid);
-            bluetoothSocket.connect();
-            Log.d("ChronometerActivity", "Conectado ao dispositivo Bluetooth.");
+            BluetoothSocket socket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+            socket.connect();
+            InputStream inputStream = socket.getInputStream();
+
+            // Escutar os dados recebidos via Bluetooth
+            listenToBluetoothCommands(inputStream);
+            Log.d("ChronometerActivity", "Conexão Bluetooth bem-sucedida.");
         } catch (IOException e) {
-            Log.e("ChronometerActivity", "Erro ao conectar ao dispositivo Bluetooth: " + e.getMessage());
+            Log.e("ChronometerActivity", "Erro ao conectar com o dispositivo Bluetooth: " + e.getMessage());
         }
     }
 
-    private void listenToBluetoothCommands() {
-        // Método para escutar comandos Bluetooth
-        // Implemente a lógica para escutar comandos Bluetooth, como iniciar e parar o cronômetro via Bluetooth
+    private void listenToBluetoothCommands(InputStream inputStream) {
+        new Thread(() -> {
+            byte[] buffer = new byte[1024];
+            int bytes;
+            while (true) {
+                try {
+                    bytes = inputStream.read(buffer);
+                    String command = new String(buffer, 0, bytes).trim();
+                    if ("START".equals(command)) {
+                        runOnUiThread(() -> toggleChronometer());
+                    }
+                } catch (IOException e) {
+                    break;
+                }
+            }
+        }).start();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == SMS_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d("ChronometerActivity", "Permissão SMS concedida.");
+            } else {
+                Toast.makeText(this, "Permissão para SMS negada.", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 }

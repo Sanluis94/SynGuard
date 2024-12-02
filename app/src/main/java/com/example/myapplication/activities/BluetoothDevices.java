@@ -10,7 +10,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.ParcelUuid;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
@@ -23,8 +25,14 @@ import androidx.core.content.ContextCompat;
 
 import com.example.myapplication.R;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
 
 public class BluetoothDevices extends AppCompatActivity {
@@ -34,7 +42,7 @@ public class BluetoothDevices extends AppCompatActivity {
     private ArrayList<BluetoothDevice> bluetoothDevices;
     private ArrayAdapter<String> devicesAdapter;
 
-    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     private static final int PERMISSION_REQUEST_CODE = 1;
 
     // UI Components
@@ -66,13 +74,6 @@ public class BluetoothDevices extends AppCompatActivity {
         if (!bluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
             startActivityForResult(enableBtIntent, 1);
@@ -84,12 +85,13 @@ public class BluetoothDevices extends AppCompatActivity {
 
         devicesListView.setOnItemClickListener((parent, view, position, id) -> {
             BluetoothDevice device = bluetoothDevices.get(position);
-            if ("HC-05".equals(device.getName())) {
-                connectToDevice(device);
-            } else {
-                Toast.makeText(this, "Este dispositivo não é compatível.", Toast.LENGTH_SHORT).show();
-            }
+            connectToDevice(device); // Qualquer dispositivo pode ser conectado
         });
+
+        // Registrar BroadcastReceiver para eventos de volume
+        IntentFilter volumeFilter = new IntentFilter();
+        volumeFilter.addAction("android.media.VOLUME_CHANGED_ACTION");
+        registerReceiver(volumeReceiver, volumeFilter);
     }
 
     @Override
@@ -97,6 +99,7 @@ public class BluetoothDevices extends AppCompatActivity {
         super.onDestroy();
         try {
             unregisterReceiver(bluetoothReceiver);
+            unregisterReceiver(volumeReceiver);  // Desregistrar o receiver de volume
         } catch (IllegalArgumentException e) {
             Log.e("BluetoothDevices", "Receiver já foi desregistrado.", e);
         }
@@ -107,6 +110,139 @@ public class BluetoothDevices extends AppCompatActivity {
         }
     }
 
+    private void showPairedDevices() {
+        // Obtém a lista de dispositivos Bluetooth já pareados
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
+
+        if (pairedDevices.size() > 0) {
+            // Exibe dispositivos pareados na lista
+            for (BluetoothDevice device : pairedDevices) {
+                String deviceName = device.getName();
+                String deviceAddress = device.getAddress();
+                String deviceUUID = device.getUuids() != null && device.getUuids().length > 0 ? device.getUuids()[0].toString() : MY_UUID.toString(); // UUID dinâmico ou fixo
+                devicesAdapter.add(deviceName + " (" + deviceAddress + ") - UUID: " + deviceUUID);
+                bluetoothDevices.add(device);
+            }
+            devicesAdapter.notifyDataSetChanged();
+            statusTextView.setText("Dispositivos pareados encontrados.");
+        } else {
+            statusTextView.setText("Nenhum dispositivo pareado encontrado.");
+        }
+    }
+
+    // Evento para capturar teclas físicas
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        super.onKeyDown(keyCode, event);
+        Log.d("BluetoothDevices", "Tecla pressionada: " + keyCode);
+
+        // Verifica se é um botão de volume
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            Log.d("BluetoothDevices", "Botão de volume up pressionado");
+        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            Log.d("BluetoothDevices", "Botão de volume down pressionado");
+        }
+        return true;
+    }
+
+    // BroadcastReceiver para capturar mudanças no volume
+    private final BroadcastReceiver volumeReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals("android.media.VOLUME_CHANGED_ACTION")) {
+                Log.d("BluetoothDevices", "Volume alterado");
+                // Aqui você pode capturar o nível de volume ou realizar outra ação
+            }
+        }
+    };
+
+    private void connectToDevice(BluetoothDevice device) {
+        new Thread(() -> {
+            try {
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    Log.e("BluetoothConnection", "Permissão BLUETOOTH_CONNECT negada. Não foi possível estabelecer a conexão.");
+                    return;
+                }
+
+                bluetoothAdapter.cancelDiscovery(); // Cancelar a descoberta antes de conectar
+
+                // Criando um socket RFCOMM com o UUID fixo do HC-05
+                BluetoothSocket socket = device.createRfcommSocketToServiceRecord(MY_UUID);
+
+                try {
+                    // Conectar ao dispositivo HC-05
+                    socket.connect();
+                    bluetoothSocket = socket;
+
+                    // Iniciar o thread para ler dados do dispositivo
+                    startListeningForData(socket);
+
+                    runOnUiThread(() -> {
+                        statusTextView.setText("Conectado a " + device.getName());
+                    });
+                } catch (IOException e) {
+                    Log.e("BluetoothConnection", "Erro ao conectar com o dispositivo: " + e.getMessage(), e);
+                    runOnUiThread(() -> {
+                        statusTextView.setText("Falha na conexão.");
+                        Toast.makeText(BluetoothDevices.this, "Falha ao conectar", Toast.LENGTH_SHORT).show();
+                    });
+                }
+            } catch (Exception e) {
+                Log.e("BluetoothConnection", "Erro inesperado durante o processo de conexão: " + e.getMessage(), e);
+            }
+        }).start();
+    }
+
+    private void startListeningForData(BluetoothSocket socket) {
+        new Thread(() -> {
+            try {
+                InputStream inputStream = socket.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+                String message;
+
+                while ((message = reader.readLine()) != null) {
+                    // Exibe a mensagem recebida no UI
+                    String finalMessage = message;
+                    runOnUiThread(() -> {
+                        Log.d("Bluetooth", "Mensagem recebida: " + finalMessage);
+                        statusTextView.setText("Mensagem do dispositivo: " + finalMessage);
+                    });
+                }
+
+            } catch (IOException e) {
+                Log.e("BluetoothData", "Erro ao ler dados do dispositivo Bluetooth: " + e.getMessage(), e);
+                runOnUiThread(() -> {
+                    statusTextView.setText("Erro ao ler dados.");
+                    Toast.makeText(BluetoothDevices.this, "Erro ao ler dados", Toast.LENGTH_SHORT).show();
+                });
+            }
+        }).start();
+    }
+
+    // Envio de dados para o dispositivo HC-05
+    private void sendDataToDevice(String data) {
+        new Thread(() -> {
+            try {
+                if (bluetoothSocket == null) {
+                    Log.e("BluetoothData", "Socket Bluetooth não está conectado.");
+                    return;
+                }
+
+                OutputStream outputStream = bluetoothSocket.getOutputStream();
+                outputStream.write(data.getBytes());
+                outputStream.flush();
+                Log.d("Bluetooth", "Mensagem enviada: " + data);
+
+            } catch (IOException e) {
+                Log.e("BluetoothData", "Erro ao enviar dados para o dispositivo: " + e.getMessage(), e);
+            }
+        }).start();
+    }
+
+    // Modificação na função de permissões para logar erros específicos
     private boolean checkAndRequestPermissions() {
         String[] permissions = {
                 Manifest.permission.BLUETOOTH,
@@ -119,11 +255,13 @@ public class BluetoothDevices extends AppCompatActivity {
         ArrayList<String> neededPermissions = new ArrayList<>();
         for (String permission : permissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                Log.w("BluetoothPermissions", "Permissão necessária não concedida: " + permission);
                 neededPermissions.add(permission);
             }
         }
 
         if (!neededPermissions.isEmpty()) {
+            Log.i("BluetoothPermissions", "Solicitando permissões: " + neededPermissions.toString());
             ActivityCompat.requestPermissions(this, neededPermissions.toArray(new String[0]), PERMISSION_REQUEST_CODE);
             return false;
         }
@@ -131,18 +269,26 @@ public class BluetoothDevices extends AppCompatActivity {
         return true;
     }
 
+    // Modificação na função de descoberta para logar falhas específicas
     private void discoverBluetoothDevices() {
         progressBar.setVisibility(ProgressBar.VISIBLE);
         statusTextView.setText("Procurando dispositivos Bluetooth...");
 
+        // Registra o receiver para eventos de descoberta e finalização da descoberta
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothDevice.ACTION_FOUND);
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         registerReceiver(bluetoothReceiver, filter);
 
+        // Exibe os dispositivos já pareados (para interação)
+        showPairedDevices();
+
+        // Inicia a descoberta de dispositivos Bluetooth, incluindo dispositivos não pareados
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("BluetoothDiscovery", "Permissão BLUETOOTH_SCAN não concedida. Não é possível realizar a descoberta.");
             return;
         }
+
         bluetoothAdapter.startDiscovery();
     }
 
@@ -153,10 +299,15 @@ public class BluetoothDevices extends AppCompatActivity {
             if (BluetoothDevice.ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 if (ActivityCompat.checkSelfPermission(BluetoothDevices.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    Log.e("BluetoothReceiver", "Permissão BLUETOOTH_CONNECT não concedida durante a descoberta.");
                     return;
                 }
                 if (device != null && device.getName() != null) {
-                    devicesAdapter.add(device.getName() + " (" + device.getAddress() + ")");
+                    String deviceName = device.getName();
+                    String deviceAddress = device.getAddress();
+                    String deviceUUID = device.getUuids() != null && device.getUuids().length > 0 ? device.getUuids()[0].toString() : MY_UUID.toString(); // UUID dinâmico ou fixo
+
+                    devicesAdapter.add(deviceName + " (" + deviceAddress + ") - UUID: " + deviceUUID);
                     bluetoothDevices.add(device);
                     devicesAdapter.notifyDataSetChanged();
                     statusTextView.setText("Dispositivos encontrados.");
@@ -170,28 +321,5 @@ public class BluetoothDevices extends AppCompatActivity {
         }
     };
 
-    private void connectToDevice(BluetoothDevice device) {
-        try {
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-                return;
-            }
-            bluetoothAdapter.cancelDiscovery(); // Certifique-se de cancelar a descoberta
-            bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
-            bluetoothSocket.connect();
-            Log.d("BluetoothDevices", "Conectado ao dispositivo Bluetooth.");
-            Toast.makeText(this, "Dispositivo conectado.", Toast.LENGTH_SHORT).show();
 
-            startChronometerActivity(device);
-
-        } catch (IOException e) {
-            Log.e("BluetoothDevices", "Erro ao conectar ao dispositivo: " + e.getMessage());
-            Toast.makeText(this, "Erro ao conectar ao dispositivo.", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void startChronometerActivity(BluetoothDevice device) {
-        Intent intent = new Intent(this, ChronometerActivity.class);
-        intent.putExtra("bluetoothDevice", device);
-        startActivity(intent);
-    }
 }

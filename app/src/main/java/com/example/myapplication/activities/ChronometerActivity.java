@@ -60,7 +60,7 @@ public class ChronometerActivity extends AppCompatActivity {
 
         if (bluetoothDevice != null) {
             connectToBluetoothDevice(bluetoothDevice);
-            listenToBluetoothCommands(); // Inicia a escuta para comandos Bluetooth
+            startChronometer();  // Inicia o cronômetro automaticamente após a conexão Bluetooth
         }
 
         databaseReference = FirebaseDatabase.getInstance().getReference("users");
@@ -75,6 +75,14 @@ public class ChronometerActivity extends AppCompatActivity {
         }
     }
 
+    private void startChronometer() {
+        chronometer.setBase(SystemClock.elapsedRealtime());
+        chronometer.start();
+        isRunning = true;
+        startStopButton.setText("Stop");
+        sendSms("Cronômetro iniciado.");
+    }
+
     private void toggleChronometer() {
         Log.d("ChronometerActivity", "Toggle cronômetro. Estado: " + (isRunning ? "Iniciando" : "Parando"));
         if (isRunning) {
@@ -84,14 +92,7 @@ public class ChronometerActivity extends AppCompatActivity {
         }
     }
 
-    private void startChronometer() {
-        chronometer.setBase(SystemClock.elapsedRealtime());
-        chronometer.start();
-        isRunning = true;
-        startStopButton.setText("Stop");
 
-        sendSms("Cronômetro iniciado.");
-    }
 
     private void stopAndSaveData() {
         chronometer.stop();

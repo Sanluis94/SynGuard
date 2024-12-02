@@ -2,35 +2,44 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#E6DFF1"
     android:orientation="vertical"
     android:padding="16dp">
 
     <EditText
         android:id="@+id/fullNameField"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Nome completo" />
+        android:layout_height="40dp"
+        android:layout_marginTop="10dp"
+        android:hint="Nome completo"
+        android:textSize="16sp" />
 
     <EditText
         android:id="@+id/emailField"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="10dp"
         android:hint="E-mail"
-        android:inputType="textEmailAddress" />
+        android:inputType="textEmailAddress"
+        android:textSize="16sp" />
 
     <EditText
         android:id="@+id/passwordField"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="10dp"
         android:hint="Senha"
-        android:inputType="textPassword" />
+        android:inputType="textPassword"
+        android:textSize="16sp" />
 
     <EditText
         android:id="@+id/confirmPasswordField"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="10dp"
         android:hint="Confirmar senha"
-        android:inputType="textPassword" />
+        android:inputType="textPassword"
+        android:textSize="16sp" />
 
     <RadioGroup
         android:id="@+id/userTypeGroup"
@@ -39,15 +48,20 @@
 
         <RadioButton
             android:id="@+id/patientRadioButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Paciente" />
+            android:layout_width="60dp"
+            android:layout_height="20dp"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:text="Paciente"
+            android:textSize="14sp" />
 
         <RadioButton
             android:id="@+id/caregiverRadioButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Cuidador" />
+            android:layout_width="60dp"
+            android:layout_height="20dp"
+            android:layout_marginTop="10dp"
+            android:text="Cuidador"
+            android:textSize="14sp" />
     </RadioGroup>
 
     <EditText
@@ -67,6 +81,10 @@
     <Button
         android:id="@+id/registerButton"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Registrar" />
+        android:layout_height="40dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/button_background"
+        android:gravity="center"
+        android:text="Registrar"
+        android:textSize="16sp" />
 </LinearLayout>

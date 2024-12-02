@@ -320,6 +320,4 @@ public class BluetoothDevices extends AppCompatActivity {
             }
         }
     };
-
-
 }

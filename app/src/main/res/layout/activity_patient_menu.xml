@@ -1,64 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#E6DFF1"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@color/cardview_light_background">
+    android:padding="16dp">
 
     <TextView
         android:id="@+id/tvWelcome"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Bem-vindo, Paciente!"
-        android:textSize="20sp"
-        android:textColor="@color/primaryColor"
         android:layout_gravity="center"
-        android:paddingBottom="24dp" />
+        android:paddingBottom="24dp"
+        android:text="Bem-vindo, Paciente!"
+        android:textSize="34sp" />
 
     <Button
         android:id="@+id/btnStartChronometer"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/rounded_button"
+        android:gravity="center"
         android:text="Iniciar Cronômetro"
         android:textAllCaps="false"
-        android:background="@drawable/rounded_button"
-        android:layout_marginBottom="16dp" />
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/btnBluetooth"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/rounded_button"
+        android:gravity="center"
         android:text="Parear Dispositivo Bluetooth"
         android:textAllCaps="false"
-        android:background="@drawable/rounded_button"
-        android:layout_marginBottom="16dp" />
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/btnViewMedicalData"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/rounded_button"
+        android:gravity="center"
         android:text="Ver Dados Médicos"
         android:textAllCaps="false"
-        android:background="@drawable/rounded_button"
-        android:layout_marginBottom="16dp" />
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/btnViewGraphs"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/rounded_button"
+        android:gravity="center"
         android:text="Ver Gráficos de Crises"
         android:textAllCaps="false"
-        android:background="@drawable/rounded_button"
-        android:layout_marginBottom="16dp" />
+        android:textSize="20sp" />
 
     <Button
         android:id="@+id/btnLogout"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:background="@drawable/rounded_button"
+        android:gravity="center"
         android:text="Sair"
         android:textAllCaps="false"
-        android:background="@drawable/rounded_button" />
+        android:textSize="20sp" />
 
 </LinearLayout>

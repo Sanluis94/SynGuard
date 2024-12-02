@@ -2,65 +2,71 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/fundo3"
+    android:gravity="center"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center">
+    android:padding="16dp">
 
     <TextView
         android:id="@+id/loginTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:gravity="center"
         android:text="Bem-vindo!"
         android:textSize="24sp"
-        android:layout_marginBottom="20dp"
-        android:gravity="center"/>
+        android:textStyle="bold" />
 
     <EditText
         android:id="@+id/emailField"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/edit_text_background"
         android:hint="E-mail"
         android:inputType="textEmailAddress"
-        android:layout_marginBottom="20dp"
         android:padding="10dp"
-        android:background="@drawable/edit_text_background"/>
+        android:textSize="16sp" />
 
     <EditText
         android:id="@+id/passwordField"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/edit_text_background"
         android:hint="Senha"
         android:inputType="textPassword"
-        android:layout_marginBottom="20dp"
         android:padding="10dp"
-        android:background="@drawable/edit_text_background"/>
+        android:textSize="16sp" />
 
     <Button
         android:id="@+id/loginButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:background="@color/accentColor"
+        android:padding="15dp"
         android:text="Entrar"
         android:textSize="16sp"
-        android:layout_marginBottom="20dp"
-        android:padding="15dp"
-        android:background="@color/primaryColor"/>
+        android:textStyle="bold" />
 
     <Button
         android:id="@+id/registerButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:background="@color/accentColor"
+        android:padding="15dp"
         android:text="Registrar"
         android:textSize="16sp"
-        android:layout_marginBottom="10dp"
-        android:padding="15dp"
-        android:background="@color/accentColor"/>
+        android:textStyle="bold" />
 
     <Button
         android:id="@+id/forgotPasswordButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Esqueci minha senha"
-        android:textSize="14sp"
         android:layout_marginBottom="20dp"
-        android:background="?android:attr/selectableItemBackground" />
+        android:background="?android:attr/selectableItemBackground"
+        android:text="Esqueci minha senha"
+        android:textSize="14sp" />
 </LinearLayout>

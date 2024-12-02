@@ -2,54 +2,58 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#E6DFF1"
     android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="140dp"
         android:orientation="vertical">
 
         <TextView
             android:id="@+id/crisisDetailsTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
             android:text="Crisis Details"
             android:textSize="24sp"
-            android:textStyle="bold"
-            android:layout_gravity="center_horizontal" />
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/crisisDateView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
             android:text="Date: 2024-01-01"
-            android:textSize="18sp"
-            android:layout_marginTop="20dp" />
+            android:textSize="18sp" />
 
         <TextView
             android:id="@+id/crisisDurationView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:text="Duration: 00:05:30"
-            android:textSize="18sp"
-            android:layout_marginTop="10dp" />
+            android:textSize="18sp" />
 
         <TextView
             android:id="@+id/notesTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
             android:text="Notes: Patient was at home during the crisis."
-            android:textSize="18sp"
-            android:layout_marginTop="10dp" />
+            android:textSize="18sp" />
 
         <Button
             android:id="@+id/closeButton"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Close"
+            android:layout_height="40dp"
             android:layout_marginTop="20dp"
             android:background="@drawable/rounded_button"
-            android:textColor="@color/backgroundColor" />
+            android:gravity="center"
+            android:text="Close"
+            android:textColor="@color/textColor"
+            android:textSize="24sp" />
 
     </LinearLayout>
 </ScrollView>

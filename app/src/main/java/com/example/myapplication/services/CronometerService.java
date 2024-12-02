@@ -12,6 +12,7 @@ import android.os.IBinder;
 import android.os.SystemClock;
 import android.telephony.SmsManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -36,7 +37,6 @@ public class CronometerService extends Service {
     private long startTime = 0L;
 
     private static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private static final String HC05_MAC_ADDRESS = "00:21:13:01:0A:F4"; // Endereço MAC do HC-05
 
     // Firebase
     private DatabaseReference databaseReference;
@@ -46,17 +46,16 @@ public class CronometerService extends Service {
         super.onCreate();
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         databaseReference = FirebaseDatabase.getInstance().getReference("users");
-        connectToBluetooth();
     }
 
-    private void connectToBluetooth() {
+    public void connectToDevice(String deviceAddress) {
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
             Log.e("CronometerService", "Bluetooth não está ativado.");
             stopSelf();
             return;
         }
 
-        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(HC05_MAC_ADDRESS);
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceAddress);
         try {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 // TODO: Consider calling
@@ -70,25 +69,18 @@ public class CronometerService extends Service {
             }
             bluetoothSocket = device.createRfcommSocketToServiceRecord(MY_UUID);
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
             bluetoothSocket.connect();
             inputStream = bluetoothSocket.getInputStream();
-            listenForButtonPress();
+            listenForData();
         } catch (IOException e) {
             Log.e("CronometerService", "Erro ao conectar ao dispositivo Bluetooth.", e);
             stopSelf();
         }
     }
 
-    private void listenForButtonPress() {
+    private void listenForData() {
         new Thread(() -> {
             byte[] buffer = new byte[1024];
             int bytes;
@@ -97,7 +89,7 @@ public class CronometerService extends Service {
                 try {
                     if (inputStream != null && (bytes = inputStream.read(buffer)) > 0) {
                         String message = new String(buffer, 0, bytes);
-                        if (message.contains("BUTTON_PRESSED")) { // Supondo que o HC-05 envie "BUTTON_PRESSED"
+                        if (message.contains("START")) {
                             handler.post(this::toggleChronometer);
                         }
                     }
@@ -121,14 +113,14 @@ public class CronometerService extends Service {
     private void startChronometer() {
         startTime = SystemClock.elapsedRealtime();
         isRunning = true;
-        sendNotificationToCaregiver("Cronômetro iniciado.");
+        sendSmsNotification("Cronômetro iniciado.");
     }
 
     private void stopChronometer() {
         long duration = (SystemClock.elapsedRealtime() - startTime) / 1000; // Segundos
         isRunning = false;
         saveDataToFirebase(duration);
-        sendNotificationToCaregiver("Cronômetro parado. Duração: " + duration + " segundos.");
+        sendSmsNotification("Cronômetro parado. Duração: " + duration + " segundos.");
     }
 
     private void saveDataToFirebase(long duration) {
@@ -153,15 +145,15 @@ public class CronometerService extends Service {
         userRef.child("crisisCount").setValue(1);
     }
 
-    private void sendNotificationToCaregiver(String message) {
-        String caregiverPhoneNumber = "5511973039004"; // Simulação do número. Pode ser recuperado do Firebase.
+    private void sendSmsNotification(String message) {
+        String caregiverPhoneNumber = "5511973039004"; // Número do cuidador
         SmsManager smsManager = SmsManager.getDefault();
-        smsManager.sendTextMessage(caregiverPhoneNumber, null, message, null, null);
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
+        try {
+            smsManager.sendTextMessage(caregiverPhoneNumber, null, message, null, null);
+            handler.post(() -> Toast.makeText(getApplicationContext(), "SMS enviado com sucesso.", Toast.LENGTH_SHORT).show());
+        } catch (Exception e) {
+            handler.post(() -> Toast.makeText(getApplicationContext(), "Falha ao enviar SMS.", Toast.LENGTH_SHORT).show());
+        }
     }
 
     @Override

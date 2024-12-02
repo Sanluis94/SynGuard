@@ -13,7 +13,7 @@
         <color name="primaryColorDark">#6200EE</color> <!-- Cor para a barra de status escura -->
         <color name="statusBarColor">#3700B3</color> <!-- Cor da barra de status -->
         <color name="primaryColorLight">#BB86FC</color> <!-- Cor primária clara -->
-        <color name="purple_200">#9C4D97</color>
+        <color name="id_purple">#9C4D97</color>
         <color name="teal_200">#80CBC4</color>
         <color name="teal_700">#00796B</color>
         <color name="white">#FFFFFF</color>

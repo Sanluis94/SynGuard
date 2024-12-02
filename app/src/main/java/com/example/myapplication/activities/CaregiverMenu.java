@@ -62,12 +62,12 @@ public class CaregiverMenu extends Activity {
 
         // Ações dos botões
         btnViewMedicalData.setOnClickListener(v -> {
-            Intent intent = new Intent(CaregiverMenu.this, CrisisDetails.class); // Tela com os dados médicos
+            Intent intent = new Intent(CaregiverMenu.this, MedicalData.class); // Tela com os dados médicos
             startActivity(intent);
         });
 
         btnViewGraphs.setOnClickListener(v -> {
-            Intent intent = new Intent(CaregiverMenu.this, CrisisDetails.class); // Tela de gráficos
+            Intent intent = new Intent(CaregiverMenu.this, CrisisGraphsActivity.class); // Tela de gráficos
             startActivity(intent);
         });
 

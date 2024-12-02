@@ -14,19 +14,21 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class MedicalData extends AppCompatActivity {
 
     private TextView crisisCountTextView;
     private TextView averageTimeTextView;
     private TextView lastCrisisTimeTextView;
-    private TextView noDataTextView;  // TextView para mostrar mensagem quando não houver dados
+    private TextView noDataTextView;
     private DatabaseReference databaseReference;
     private List<CrisisData> crisisDataList;
 
@@ -38,12 +40,11 @@ public class MedicalData extends AppCompatActivity {
         crisisCountTextView = findViewById(R.id.tvCrisisCount);
         averageTimeTextView = findViewById(R.id.tvAverageTime);
         lastCrisisTimeTextView = findViewById(R.id.tvLastCrisisTime);
-        noDataTextView = findViewById(R.id.tvNoData);  // Adicionando TextView para mensagem de no data
-        databaseReference = FirebaseDatabase.getInstance().getReference("users"); // "users" é a raiz que contém todos os dados
+        noDataTextView = findViewById(R.id.tvNoData);
+        databaseReference = FirebaseDatabase.getInstance().getReference("users");
 
         crisisDataList = new ArrayList<>();
 
-        // Carregar dados das crises
         loadCrisisData();
     }
 
@@ -54,33 +55,47 @@ public class MedicalData extends AppCompatActivity {
             return;
         }
 
-        // Acessar o nó do Firebase que contém as crises do usuário
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("users").child(userId);
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String caregiverId = dataSnapshot.child("caregiverId").getValue(String.class);
+                    if (caregiverId != null) {
+                        loadPatientData(caregiverId);  // Carregar dados do paciente associado ao cuidador
+                    } else {
+                        loadOwnData(userId);  // Carregar dados do próprio paciente
+                    }
+                } else {
+                    Toast.makeText(MedicalData.this, "Erro: dados do usuário não encontrados.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(MedicalData.this, "Erro ao carregar dados", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void loadOwnData(String userId) {
         DatabaseReference crisisRef = FirebaseDatabase.getInstance().getReference("users")
                 .child(userId)
                 .child("crisisData");
 
-        // Escuta para os dados do Firebase com ano, mês e dia
         crisisRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    for (DataSnapshot yearSnapshot : dataSnapshot.getChildren()) {
-                        for (DataSnapshot monthSnapshot : yearSnapshot.getChildren()) {
-                            for (DataSnapshot daySnapshot : monthSnapshot.getChildren()) {
-                                for (DataSnapshot crisisSnapshot : daySnapshot.getChildren()) {
-                                    CrisisData crisisData = crisisSnapshot.getValue(CrisisData.class);
-                                    if (crisisData != null) {
-                                        crisisDataList.add(crisisData);  // Adiciona os dados da crise à lista
-                                    }
-                                }
-                            }
+                    crisisDataList.clear(); // Limpar a lista antes de adicionar os novos dados
+                    for (DataSnapshot crisisSnapshot : dataSnapshot.getChildren()) {
+                        CrisisData crisisData = crisisSnapshot.getValue(CrisisData.class);
+                        if (crisisData != null) {
+                            crisisDataList.add(crisisData);
                         }
                     }
-                    updateUI();  // Atualiza a interface com os dados de crise
+                    updateUI();
                 } else {
-                    crisisCountTextView.setText("Total de Crises: 0");
-                    averageTimeTextView.setText("Tempo Médio das Crises: N/A");
-                    lastCrisisTimeTextView.setText("Última Crise: N/A");
                     noDataTextView.setText("Sem dados de crise para este paciente.");
                 }
             }
@@ -92,30 +107,75 @@ public class MedicalData extends AppCompatActivity {
         });
     }
 
+    private void loadPatientData(String caregiverId) {
+        Query patientRef = FirebaseDatabase.getInstance().getReference("users")
+                .orderByChild("caregiverId")
+                .equalTo(caregiverId);  // Buscar pacientes pelo caregiverId
+
+        patientRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    crisisDataList.clear(); // Limpar a lista antes de adicionar os novos dados
+                    for (DataSnapshot patientSnapshot : dataSnapshot.getChildren()) {
+                        String patientId = patientSnapshot.getKey();
+                        DatabaseReference crisisRef = FirebaseDatabase.getInstance().getReference("users")
+                                .child(patientId)
+                                .child("crisisData");
+
+                        crisisRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(DataSnapshot crisisSnapshot) {
+                                if (crisisSnapshot.exists()) {
+                                    for (DataSnapshot crisisDataSnapshot : crisisSnapshot.getChildren()) {
+                                        CrisisData crisisData = crisisDataSnapshot.getValue(CrisisData.class);
+                                        if (crisisData != null) {
+                                            crisisDataList.add(crisisData);
+                                        }
+                                    }
+                                    updateUI();
+                                }
+                            }
+
+                            @Override
+                            public void onCancelled(DatabaseError databaseError) {
+                                Toast.makeText(MedicalData.this, "Erro ao carregar dados de crises", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                } else {
+                    noDataTextView.setText("Sem pacientes associados.");
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(MedicalData.this, "Erro ao carregar pacientes", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+
     private void updateUI() {
         int totalCrisisCount = 0;
         long totalDuration = 0;
-        long totalAverageTime = 0;
         long lastCrisisTime = 0;
+        String formattedTimestamp = "";
 
-        // Calculando as somas para total de crises, duração total e tempo médio
         for (CrisisData crisisData : crisisDataList) {
-            totalCrisisCount = (int) crisisData.getCrisisCount();
-            totalDuration = crisisData.getDuration();
-            totalAverageTime = crisisData.getAverageTime();
-            lastCrisisTime = Math.max(lastCrisisTime, crisisData.getLastCrisisTime()); // Pega o maior (último) tempo de crise
+            totalCrisisCount += crisisData.getCrisisCount();
+            totalDuration += crisisData.getDuration();
+            lastCrisisTime = Math.max(lastCrisisTime, crisisData.getLastCrisisTime());
+            formattedTimestamp = crisisData.getFormattedTimestamp();
+
         }
 
-        // Exibindo os resultados
         crisisCountTextView.setText("Total de Crises: " + totalCrisisCount);
-        averageTimeTextView.setText("Tempo Médio das Crises: " + (totalCrisisCount > 0 ? (totalDuration / totalCrisisCount) + " segundos" : "N/A"));
+        averageTimeTextView.setText("Tempo Médio das Crises: " + totalDuration + " segundos" );
 
-        // Formatando a data da última crise
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-        String formattedDate = (lastCrisisTime > 0) ? sdf.format(new Date(lastCrisisTime)) : "N/A";
-        lastCrisisTimeTextView.setText("Última Crise: " + formattedDate);
+        lastCrisisTimeTextView.setText("Última Crise: " + formattedTimestamp);
 
-        // Caso não haja dados, mostrar a mensagem correspondente
         noDataTextView.setText(crisisDataList.isEmpty() ? "Sem dados de crise para este paciente." : "");
     }
+
 }

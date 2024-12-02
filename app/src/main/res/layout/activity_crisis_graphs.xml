@@ -14,21 +14,11 @@
         android:layout_gravity="center"
         android:layout_marginBottom="16dp" />
 
-    <com.github.mikephil.charting.charts.LineChart
-        android:id="@+id/lineChartCrises"
-        android:layout_width="match_parent"
-        android:layout_height="300dp"
-        android:layout_marginTop="16dp"/>
 
     <com.github.mikephil.charting.charts.BarChart
         android:id="@+id/barChartCrises"
         android:layout_width="match_parent"
         android:layout_height="300dp"
         android:layout_marginBottom="16dp" />
-
-    <com.github.mikephil.charting.charts.LineChart
-        android:id="@+id/lineChartAverageTime"
-        android:layout_width="match_parent"
-        android:layout_height="300dp" />
 
 </LinearLayout>

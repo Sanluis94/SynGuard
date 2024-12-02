@@ -3,7 +3,6 @@ package com.example.myapplication.activities;
 import android.Manifest;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -21,10 +20,10 @@ import androidx.core.content.ContextCompat;
 import com.example.myapplication.R;
 import com.example.myapplication.models.CrisisData;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.io.IOException;
@@ -37,13 +36,13 @@ public class ChronometerActivity extends AppCompatActivity {
     private Button startStopButton;
     private boolean isRunning = false;
     private long pauseOffset = 0;
-    private long totalCrisisTime = 0L;
+    private long totalCrisisTime = 0L;  // Tempo total das crises
     private long crisisCount = 0L;
     private long lastCrisisTime = 0L;
     private long averageTime = 0L;
 
-    private BluetoothDevice bluetoothDevice;  // Para armazenar o dispositivo Bluetooth
-    private BluetoothSocket bluetoothSocket;  // Para a conexão Bluetooth
+    private BluetoothDevice bluetoothDevice;
+    private BluetoothSocket bluetoothSocket;
 
     private DatabaseReference databaseReference;
 
@@ -57,71 +56,27 @@ public class ChronometerActivity extends AppCompatActivity {
         chronometer = findViewById(R.id.chronometer);
         startStopButton = findViewById(R.id.startStopButton);
 
-        // Recuperar o dispositivo Bluetooth a partir do Intent
         bluetoothDevice = getIntent().getParcelableExtra("bluetoothDevice");
 
         if (bluetoothDevice != null) {
-            // Conectar ao dispositivo Bluetooth
             connectToBluetoothDevice(bluetoothDevice);
+            listenToBluetoothCommands(); // Inicia a escuta para comandos Bluetooth
         }
 
         databaseReference = FirebaseDatabase.getInstance().getReference("users");
+
+        // Carregar dados históricos de crises do Firebase
+        loadCrisisData();
 
         startStopButton.setOnClickListener(view -> toggleChronometer());
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.SEND_SMS}, SMS_PERMISSION_REQUEST);
         }
-
-        // Recuperar o número de telefone do cuidador para enviar SMS
-        getCaregiverPhoneNumber();
-    }
-
-    private void getCaregiverPhoneNumber() {
-        // Obtém o ID do usuário atual
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        if (userId == null) {
-            Log.e("ChronometerActivity", "Usuário não autenticado.");
-            Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Recuperar o número de telefone do cuidador do Firebase
-        databaseReference.child("users").child(userId).child("phoneNumber").addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists()) {
-                    String caregiverPhoneNumber = dataSnapshot.getValue(String.class);
-                    if (caregiverPhoneNumber != null && !caregiverPhoneNumber.isEmpty()) {
-                        // Salvar o número de telefone para o envio do SMS
-                        sendSmsToCaregiver(caregiverPhoneNumber, "Cronômetro iniciado.");
-                    } else {
-                        Toast.makeText(ChronometerActivity.this, "Número do cuidador não encontrado.", Toast.LENGTH_SHORT).show();
-                    }
-                } else {
-                    Toast.makeText(ChronometerActivity.this, "Dados do cuidador não encontrados.", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(ChronometerActivity.this, "Erro ao acessar dados do cuidador: " + databaseError.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    private void sendSmsToCaregiver(String caregiverPhoneNumber, String message) {
-        try {
-            SmsManager smsManager = SmsManager.getDefault();
-            smsManager.sendTextMessage(caregiverPhoneNumber, null, message, null, null);
-            Log.d("ChronometerActivity", "Mensagem enviada ao cuidador.");
-        } catch (Exception e) {
-            Log.e("ChronometerActivity", "Erro ao enviar mensagem: " + e.getMessage());
-            Toast.makeText(this, "Erro ao enviar mensagem.", Toast.LENGTH_SHORT).show();
-        }
     }
 
     private void toggleChronometer() {
+        Log.d("ChronometerActivity", "Toggle cronômetro. Estado: " + (isRunning ? "Iniciando" : "Parando"));
         if (isRunning) {
             stopAndSaveData();
         } else {
@@ -131,102 +86,197 @@ public class ChronometerActivity extends AppCompatActivity {
 
     private void startChronometer() {
         chronometer.setBase(SystemClock.elapsedRealtime());
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         chronometer.start();
         isRunning = true;
         startStopButton.setText("Stop");
 
-        // Enviar SMS para o cuidador assim que o cronômetro começar
-        sendSmsToCaregiver(getCaregiverPhoneNumberFromDatabase(), "Cronômetro iniciado.");
-        Toast.makeText(this, "Cronômetro iniciado", Toast.LENGTH_SHORT).show();
+        sendSms("Cronômetro iniciado.");
     }
 
     private void stopAndSaveData() {
         chronometer.stop();
-        long duration = SystemClock.elapsedRealtime() - chronometer.getBase();
+        long duration = SystemClock.elapsedRealtime() - chronometer.getBase(); // Calcula a duração da crise em milissegundos
         isRunning = false;
 
-        lastCrisisTime = duration / 1000;
-        totalCrisisTime += lastCrisisTime;
-        crisisCount++;
+        lastCrisisTime = duration / 1000;  // Convertendo a duração para segundos
+        totalCrisisTime += lastCrisisTime; // Soma a duração total das crises
+        crisisCount++; // Aumenta o contador de crises
 
-        averageTime = totalCrisisTime / crisisCount;
+        // Recalcular o tempo médio das crises
+        averageTime = crisisCount > 0 ? totalCrisisTime / crisisCount : 0;
 
-        saveDataToFirebase(lastCrisisTime, averageTime);
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        saveDataToFirebase(lastCrisisTime, averageTime, totalCrisisTime); // Salva os dados corrigidos no Firebase
 
-        chronometer.setBase(SystemClock.elapsedRealtime());
+        chronometer.setBase(SystemClock.elapsedRealtime()); // Reseta o cronômetro
         pauseOffset = 0;
         startStopButton.setText("Start");
 
-        sendSmsToCaregiver(getCaregiverPhoneNumberFromDatabase(), "Cronômetro parado. Duração: " + lastCrisisTime + " segundos.");
-        Toast.makeText(this, "Cronômetro parado e dados salvos", Toast.LENGTH_SHORT).show();
+        sendSms("Cronômetro parado. Duração: " + lastCrisisTime + " segundos."); // Envia a mensagem com a duração da crise
     }
 
-    private String getCaregiverPhoneNumberFromDatabase() {
-        // Recuperar o número do cuidador diretamente do banco de dados
-        final String[] phoneNumber = {""};  // Usar um array para obter valor de forma assíncrona
+    private void loadCrisisData() {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        databaseReference.child("users").child(userId).child("phoneNumber").addListenerForSingleValueEvent(new ValueEventListener() {
+        if (userId == null) {
+            Toast.makeText(this, "Usuário não autenticado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Carregar as crises registradas para o usuário autenticado
+        databaseReference.child(userId).child("crisisData").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
-                    phoneNumber[0] = dataSnapshot.getValue(String.class);
+                    long totalTime = 0L;
+                    long count = 0L;
+
+                    // Iterar sobre todos os dados de crise
+                    for (DataSnapshot crisisSnapshot : dataSnapshot.getChildren()) {
+                        CrisisData crisisData = crisisSnapshot.getValue(CrisisData.class);
+                        if (crisisData != null) {
+                            totalTime += crisisData.getDuration();  // Somando o tempo das crises
+                            count += crisisData.getCrisisCount();   // Somando a quantidade de crises
+                        }
+                    }
+
+                    // Atualizar os valores históricos
+                    totalCrisisTime = totalTime;  // Total de tempo de todas as crises
+                    crisisCount = count;  // Total de crises
+                    if (crisisCount > 0) {
+                        averageTime = totalCrisisTime / crisisCount;  // Calculando a média
+                    }
+
+                    Log.d("ChronometerActivity", "Dados históricos carregados. Total de crises: " + crisisCount + ", Tempo total de crises: " + totalCrisisTime);
                 }
             }
 
             @Override
-            public void onCancelled(DatabaseError databaseError) {
-                Log.e("ChronometerActivity", "Erro ao acessar dados do cuidador: " + databaseError.getMessage());
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("ChronometerActivity", "Erro ao carregar dados históricos de crises: " + error.getMessage());
             }
         });
-        return phoneNumber[0];  // Isso ainda está assíncrono, mas serve como um exemplo
     }
 
-    private void saveDataToFirebase(long lastCrisisTime, long averageTime) {
+    private void saveDataToFirebase(long lastCrisisTime, long averageTime, long totalTime) {
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         if (userId == null) {
-            Log.e("ChronometerActivity", "Usuário não autenticado.");
-            Toast.makeText(this, "Erro: usuário não autenticado.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Usuário não autenticado.", Toast.LENGTH_SHORT).show();
             return;
         }
 
+        // Usando a data atual para gerar a chave única
         Calendar calendar = Calendar.getInstance();
-        int year = calendar.get(Calendar.YEAR);
-        int month = calendar.get(Calendar.MONTH) + 1; // Incrementa 1 porque o mês começa do 0 (Janeiro)
+        String dateKey = calendar.get(Calendar.YEAR) + "-" + (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH);
 
-        DatabaseReference crisisRef = databaseReference.child(userId).child("crisisData").child(year + "-" + month).push();
+        // Gerar um objeto CrisisData com os dados da crise
+        CrisisData crisisData = new CrisisData(lastCrisisTime, averageTime, crisisCount, totalTime);
 
-        CrisisData crisisData = new CrisisData(lastCrisisTime, totalCrisisTime, crisisCount, lastCrisisTime, averageTime);
-        crisisRef.setValue(crisisData)
-                .addOnSuccessListener(aVoid -> Log.d("ChronometerActivity", "Dados da crise salvos com sucesso."))
-                .addOnFailureListener(e -> Log.e("ChronometerActivity", "Erro ao salvar dados: " + e.getMessage()));
+        // Salvar os dados da crise no Firebase para o usuário autenticado
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("users");
+        databaseReference.child(userId).child("crisisData").child(dateKey).setValue(crisisData)
+                .addOnSuccessListener(aVoid -> Log.d("ChronometerActivity", "Dados de crise salvos com sucesso!"))
+                .addOnFailureListener(e -> Log.e("ChronometerActivity", "Erro ao salvar dados de crise: " + e.getMessage()));
+
+        Log.d("ChronometerActivity", "CrisisCount após salvar: " + crisisCount);
+    }
+
+    private void sendSms(String message) {
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+        if (userId == null) {
+            Toast.makeText(this, "Usuário não autenticado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        databaseReference.child(userId).child("caregiverId").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String caregiverId = dataSnapshot.getValue(String.class);
+                    Log.d("ChronometerActivity", "Caregiver ID encontrado: " + caregiverId);
+
+                    if (caregiverId != null && !caregiverId.isEmpty()) {
+                        // Procurando os usuários com o mesmo caregiverId
+                        databaseReference.orderByChild("caregiverId").equalTo(caregiverId)
+                                .addListenerForSingleValueEvent(new ValueEventListener() {
+                                    @Override
+                                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                        for (DataSnapshot userSnapshot : snapshot.getChildren()) {
+                                            String otherUserId = userSnapshot.getKey();  // UID do outro usuário
+                                            Log.d("ChronometerActivity", "Outro usuário encontrado: " + otherUserId);
+
+                                            // Buscando o telefone do cuidador
+                                            databaseReference.child(otherUserId).child("phone").addListenerForSingleValueEvent(new ValueEventListener() {
+                                                @Override
+                                                public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                                                    String phoneNumber = dataSnapshot.getValue(String.class);
+                                                    if (phoneNumber != null && !phoneNumber.isEmpty()) {
+                                                        Log.d("ChronometerActivity", "Número de telefone do cuidador encontrado: " + phoneNumber);
+
+                                                        if (phoneNumber.startsWith("+")) {
+                                                            try {
+                                                                SmsManager smsManager = SmsManager.getDefault();
+                                                                smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+                                                                Log.d("ChronometerActivity", "Mensagem SMS enviada com sucesso.");
+                                                            } catch (Exception e) {
+                                                                Log.e("ChronometerActivity", "Erro ao enviar SMS: " + e.getMessage());
+                                                            }
+                                                        } else {
+                                                            Log.e("ChronometerActivity", "Número de telefone inválido.");
+                                                        }
+                                                    } else {
+                                                        Log.e("ChronometerActivity", "Telefone não encontrado ou inválido.");
+                                                    }
+                                                }
+
+                                                @Override
+                                                public void onCancelled(@NonNull DatabaseError error) {
+                                                    Log.e("ChronometerActivity", "Erro ao recuperar o telefone: " + error.getMessage());
+                                                }
+                                            });
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onCancelled(@NonNull DatabaseError error) {
+                                        Log.e("ChronometerActivity", "Erro ao buscar cuidador: " + error.getMessage());
+                                    }
+                                });
+                    } else {
+                        Log.e("ChronometerActivity", "Caregiver ID inválido.");
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Log.e("ChronometerActivity", "Erro ao recuperar caregiverId: " + error.getMessage());
+            }
+        });
     }
 
     private void connectToBluetoothDevice(BluetoothDevice device) {
         try {
+            // Configuração do UUID padrão para o Bluetooth
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
                 return;
             }
-
-            bluetoothSocket = device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+            UUID uuid = device.getUuids()[0].getUuid();
+            bluetoothSocket = device.createRfcommSocketToServiceRecord(uuid);
             bluetoothSocket.connect();
             Log.d("ChronometerActivity", "Conectado ao dispositivo Bluetooth.");
         } catch (IOException e) {
-            Log.e("ChronometerActivity", "Erro ao conectar ao Bluetooth: " + e.getMessage());
-            Toast.makeText(this, "Erro ao conectar ao dispositivo Bluetooth", Toast.LENGTH_SHORT).show();
+            Log.e("ChronometerActivity", "Erro ao conectar ao dispositivo Bluetooth: " + e.getMessage());
         }
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == SMS_PERMISSION_REQUEST) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "Permissão de SMS concedida.", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "Permissão de SMS negada.", Toast.LENGTH_SHORT).show();
-            }
-        }
+    private void listenToBluetoothCommands() {
+        // Método para escutar comandos Bluetooth
+        // Implemente a lógica para escutar comandos Bluetooth, como iniciar e parar o cronômetro via Bluetooth
     }
 }

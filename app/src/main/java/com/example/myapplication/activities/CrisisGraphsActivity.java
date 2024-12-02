@@ -7,25 +7,29 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
 import com.example.myapplication.models.CrisisData;
-import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.data.LineData;
-import com.github.mikephil.charting.data.LineDataSet;
-import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 import com.github.mikephil.charting.formatter.ValueFormatter;
-
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class CrisisGraphsActivity extends AppCompatActivity {
 
-    private LineChart lineChartCrises;
+    private BarChart barChartCrises;
     private List<CrisisData> crisisDataList;
 
     @Override
@@ -33,10 +37,9 @@ public class CrisisGraphsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_crisis_graphs);
 
-        lineChartCrises = findViewById(R.id.lineChartCrises);
+        barChartCrises = findViewById(R.id.barChartCrises);  // Alterado para BarChart
         crisisDataList = new ArrayList<>();
 
-        // Carregar dados das crises
         loadCrisisData();
     }
 
@@ -47,104 +50,174 @@ public class CrisisGraphsActivity extends AppCompatActivity {
             return;
         }
 
-        // Acessar o nó do Firebase que contém as crises do usuário
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference("users").child(userId);
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    String caregiverId = dataSnapshot.child("caregiverId").getValue(String.class);
+                    if (caregiverId != null) {
+                        loadPatientData(caregiverId);  // Carregar dados dos pacientes
+                    } else {
+                        loadOwnData(userId);  // Carregar dados do próprio paciente
+                    }
+                } else {
+                    Toast.makeText(CrisisGraphsActivity.this, "Erro: dados do usuário não encontrados.", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar dados", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void loadOwnData(String userId) {
         DatabaseReference crisisRef = FirebaseDatabase.getInstance().getReference("users")
                 .child(userId)
                 .child("crisisData");
 
-        // Escuta para os dados do Firebase com ano, mês e dia
         crisisRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists()) {
                     for (DataSnapshot yearSnapshot : dataSnapshot.getChildren()) {
                         for (DataSnapshot monthSnapshot : yearSnapshot.getChildren()) {
-                            for (DataSnapshot daySnapshot : monthSnapshot.getChildren()) {
-                                for (DataSnapshot crisisSnapshot : daySnapshot.getChildren()) {
-                                    CrisisData crisisData = crisisSnapshot.getValue(CrisisData.class);
-                                    if (crisisData != null) {
-                                        crisisDataList.add(crisisData);  // Adiciona os dados da crise à lista
-                                    }
+                            for (DataSnapshot crisisSnapshot : monthSnapshot.getChildren()) {
+                                CrisisData crisisData = crisisSnapshot.getValue(CrisisData.class);
+                                if (crisisData != null) {
+                                    crisisDataList.add(crisisData);
                                 }
                             }
                         }
                     }
-                    // Após carregar os dados, atualiza o gráfico
-                    if (crisisDataList.isEmpty()) {
-                        updateGraphWithNoData();
-                    } else {
-                        updateGraph();
-                    }
+                    sortAndUpdateGraph();  // Ordenar os dados e atualizar o gráfico
                 } else {
-                    Toast.makeText(CrisisGraphsActivity.this, "Nenhuma crise registrada para este usuário", Toast.LENGTH_SHORT).show();
-                    updateGraphWithNoData();
+                    Toast.makeText(CrisisGraphsActivity.this, "Nenhum dado de crise encontrado.", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError databaseError) {
-                Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar os dados", Toast.LENGTH_SHORT).show();
+                Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar dados de crises", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void updateGraph() {
-        // Listas para armazenar os dados de número de crises e tempo médio
-        List<Entry> crisisEntries = new ArrayList<>();
-        List<Entry> averageTimeEntries = new ArrayList<>();
+    private void loadPatientData(String caregiverId) {
+        Query patientRef = FirebaseDatabase.getInstance().getReference("users")
+                .orderByChild("caregiverId")
+                .equalTo(caregiverId);  // Isso retorna um Query, que é correto.
 
-        // Agora estamos utilizando a lista de crises carregada
+        patientRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    for (DataSnapshot patientSnapshot : dataSnapshot.getChildren()) {
+                        String patientId = patientSnapshot.getKey();
+                        DatabaseReference crisisRef = FirebaseDatabase.getInstance().getReference("users")
+                                .child(patientId)
+                                .child("crisisData");
+                        crisisRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                            @Override
+                            public void onDataChange(DataSnapshot crisisSnapshot) {
+                                if (crisisSnapshot.exists()) {
+                                    for (DataSnapshot crisisDataSnapshot : crisisSnapshot.getChildren()) {
+                                        CrisisData crisisData = crisisDataSnapshot.getValue(CrisisData.class);
+                                        if (crisisData != null) {
+                                            crisisDataList.add(crisisData);
+                                        }
+                                    }
+                                    sortAndUpdateGraph();  // Ordenar os dados e atualizar o gráfico
+                                }
+                            }
+
+                            @Override
+                            public void onCancelled(DatabaseError databaseError) {
+                                Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar dados de crises", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Toast.makeText(CrisisGraphsActivity.this, "Erro ao carregar pacientes", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void sortAndUpdateGraph() {
+        // Ordenar a lista de crises por timestamp (do mais recente para o mais antigo)
+        Collections.sort(crisisDataList, new Comparator<CrisisData>() {
+            @Override
+            public int compare(CrisisData crisis1, CrisisData crisis2) {
+                return Long.compare(crisis2.getTimestamp(), crisis1.getTimestamp());  // Ordenar do mais recente
+            }
+        });
+
+        // Criar uma lista de entradas para o gráfico
+        List<BarEntry> entries = new ArrayList<>();
+
+        long totalCrises = 0;
+        long totalDuration = 0;
+
         for (int i = 0; i < crisisDataList.size(); i++) {
             CrisisData crisis = crisisDataList.get(i);
-            long crisisCount = crisis.getCrisisCount();
-            long averageTime = crisis.getAverageTime();
+            totalCrises += crisis.getCrisisCount(); // Somando o número de crises
+            totalDuration += crisis.getDuration(); // Somando a duração de todas as crises
 
-            // Adiciona o número de crises (eixo X)
-            crisisEntries.add(new Entry(i, crisisCount));
-            // Adiciona o tempo médio das crises (eixo Y)
-            averageTimeEntries.add(new Entry(i, averageTime));
+            // Calculando o tempo médio até o ponto atual (média acumulada de tempo)
+            long averageTime = totalDuration / totalCrises;
+
+            // Adicionando ao gráfico: eixo X = número de crises e eixo Y = tempo médio
+            entries.add(new BarEntry(totalCrises, averageTime));  // (número de crises, tempo médio)
         }
 
-        // Criando os dados de linha para o gráfico
-        LineDataSet crisisDataSet = new LineDataSet(crisisEntries, "Número de Crises");
-        LineDataSet averageTimeDataSet = new LineDataSet(averageTimeEntries, "Tempo Médio (segundos)");
+        // Criando o dataset com as entradas para o gráfico
+        BarDataSet dataSet = new BarDataSet(entries, "Número de Crises vs Tempo Médio");
+        dataSet.setColor(getResources().getColor(R.color.primaryColor)); // Escolher a cor para a barra
+        dataSet.setValueTextColor(getResources().getColor(R.color.accentColor)); // Cor dos valores
 
-        // Definindo cores diferentes para as linhas
-        crisisDataSet.setColor(getResources().getColor(R.color.primaryColor));
-        averageTimeDataSet.setColor(getResources().getColor(R.color.accentColor));
+        // Criando o BarData e aplicando no gráfico
+        BarData barData = new BarData(dataSet);
+        barChartCrises.setData(barData);
+        barChartCrises.invalidate();  // Atualiza o gráfico
 
-        // Adicionando os dados ao gráfico
-        LineData lineData = new LineData(crisisDataSet, averageTimeDataSet);
-        lineChartCrises.setData(lineData);
-        lineChartCrises.invalidate(); // Atualiza o gráfico
+        // Se necessário, você pode configurar a aparência do gráfico aqui (como títulos, eixos, etc.)
+        barChartCrises.getDescription().setEnabled(false);  // Desabilita descrição padrão
 
-        // Definindo formatação para o valor mostrado nas linhas (opcional)
-        crisisDataSet.setValueFormatter(new ValueFormatter() {
+        // Configurações do eixo X
+        barChartCrises.getXAxis().setGranularity(1f);  // Define a granulação no eixo X
+        barChartCrises.getXAxis().setLabelCount(5, true);  // Número de rótulos no eixo X
+        barChartCrises.getXAxis().setValueFormatter(new IndexAxisValueFormatter() {
             @Override
             public String getFormattedValue(float value) {
-                return String.valueOf((int) value); // Formatar como inteiro para número de crises
+                return "Crises: " + (int) value;  // Adicionando rótulo "Crises: X"
             }
         });
 
-        averageTimeDataSet.setValueFormatter(new ValueFormatter() {
+        // Configurações do eixo Y
+        barChartCrises.getAxisLeft().setGranularity(1f);  // Granularidade no eixo Y
+        barChartCrises.getAxisLeft().setAxisMinimum(0f);  // Define o valor mínimo do eixo Y
+        barChartCrises.getAxisLeft().setLabelCount(5, true); // Número de rótulos no eixo Y
+        barChartCrises.getAxisLeft().setValueFormatter(new ValueFormatter() {
             @Override
             public String getFormattedValue(float value) {
-                return String.valueOf((int) value); // Formatar como inteiro para tempo médio
+                return String.format("%.0f s", value);  // Exibe o valor em segundos
             }
         });
-    }
 
-    private void updateGraphWithNoData() {
-        // Caso não haja dados, exibe o gráfico vazio com uma mensagem
-        List<Entry> entries = new ArrayList<>();
-        entries.add(new Entry(0, 0)); // Exemplo: gráfico vazio com um valor de 0
+        // Definindo os rótulos de cada eixo
+        barChartCrises.getXAxis().setPosition(XAxis.XAxisPosition.BOTTOM); // Posição do eixo X
+        barChartCrises.getXAxis().setLabelRotationAngle(45f);  // Rotacionar os rótulos do eixo X para melhor visualização
+        barChartCrises.getAxisLeft().setDrawLabels(true);
+        barChartCrises.getAxisLeft().setLabelCount(6, true); // Número de rótulos no eixo Y
+        barChartCrises.getAxisRight().setEnabled(false); // Desabilita o eixo Y direito
 
-        LineDataSet lineDataSet = new LineDataSet(entries, "Número de Crises");
-        LineData lineData = new LineData(lineDataSet);
-
-        lineChartCrises.setData(lineData);
-        lineChartCrises.invalidate(); // Atualiza o gráfico
-
-        Toast.makeText(this, "Sem dados de crises para exibir no gráfico", Toast.LENGTH_SHORT).show();
+        // Adicionando título ao gráfico
+        barChartCrises.getLegend().setEnabled(false); // Se não quiser legenda
     }
 }
